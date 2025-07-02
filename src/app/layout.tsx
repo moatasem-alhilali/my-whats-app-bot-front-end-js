@@ -8,45 +8,81 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "WhatsApp Dashboard",
-  description: "Manage WhatsApp sessions and send messages",
+  description:
+    "Manage WhatsApp sessions and send messages with GitHub-inspired dark UI",
 };
 
 function Navigation() {
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <nav className="bg-[#161b22] border-b border-[#21262d] sticky top-0 z-50 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">
-                📱 WhatsApp Dashboard
+          <div className="flex items-center">
+            {/* Logo */}
+            <Link
+              href="/"
+              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+            >
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">W</span>
+              </div>
+              <h1 className="text-xl font-semibold text-white">
+                WhatsApp Dashboard
               </h1>
-            </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+            </Link>
+
+            {/* Navigation Links */}
+            <div className="hidden md:ml-8 md:flex md:space-x-1">
               <Link
                 href="/setup"
-                className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-[#21262d] transition-all duration-200"
               >
-                Setup
+                🔗 Setup
               </Link>
               <Link
                 href="/status"
-                className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-[#21262d] transition-all duration-200"
               >
-                Status
+                📊 Status
               </Link>
               <Link
                 href="/send"
-                className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-[#21262d] transition-all duration-200"
               >
-                Send Messages
+                💬 Messages
               </Link>
             </div>
           </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500">
-              API: http://localhost:3001
-            </span>
+
+          {/* Right side */}
+          <div className="flex items-center space-x-4">
+            {/* API Status */}
+            <div className="hidden sm:flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-gray-400 font-mono">
+                API: localhost:3001
+              </span>
+            </div>
+
+            {/* Mobile menu button */}
+            <button
+              className="md:hidden p-2 rounded-lg text-gray-300 hover:text-white hover:bg-[#21262d] transition-colors"
+              aria-label="Open mobile navigation menu"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -56,12 +92,99 @@ function Navigation() {
 
 function LoadingSpinner() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
       <div className="text-center">
-        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading...</p>
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-[#21262d] border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <div
+            className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-green-500 rounded-full animate-spin mx-auto"
+            style={{ animationDirection: "reverse", animationDuration: "1.5s" }}
+          ></div>
+        </div>
+        <p className="text-gray-400 font-medium">Loading Dashboard...</p>
+        <div className="mt-2 flex justify-center space-x-1">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+          <div
+            className="w-2 h-2 bg-green-500 rounded-full animate-bounce"
+            style={{ animationDelay: "0.1s" }}
+          ></div>
+          <div
+            className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+            style={{ animationDelay: "0.2s" }}
+          ></div>
+        </div>
       </div>
     </div>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="bg-[#161b22] border-t border-[#21262d] mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <h3 className="text-sm font-semibold text-white mb-3">
+              WhatsApp Dashboard
+            </h3>
+            <p className="text-sm text-gray-400">
+              Modern dashboard for managing WhatsApp sessions with
+              GitHub-inspired design.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-white mb-3">
+              Quick Links
+            </h3>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  href="/setup"
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Setup Session
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/status"
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  View Status
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/send"
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Send Messages
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-white mb-3">API Info</h3>
+            <ul className="space-y-2">
+              <li className="text-sm text-gray-400">
+                Backend: Node.js + Express
+              </li>
+              <li className="text-sm text-gray-400">
+                Frontend: Next.js + TypeScript
+              </li>
+              <li className="text-sm text-gray-400">
+                API: http://localhost:3001
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-[#21262d] mt-8 pt-6 text-center">
+          <p className="text-sm text-gray-400">
+            Built with ❤️ using whatsapp-web.js and modern web technologies
+          </p>
+        </div>
+      </div>
+    </footer>
   );
 }
 
@@ -71,13 +194,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
+    <html lang="en" className="dark">
+      <body
+        className={`${inter.className} bg-[#0d1117] min-h-screen flex flex-col`}
+      >
+        <div className="grid-pattern flex-1">
           <Navigation />
-          <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <main className="flex-1">
             <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>
           </main>
+          <Footer />
         </div>
       </body>
     </html>

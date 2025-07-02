@@ -21,6 +21,9 @@ export default function StatusPage() {
 
   useEffect(() => {
     loadSessions();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(loadSessions, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -118,260 +121,312 @@ export default function StatusPage() {
 
   const getStatusBadge = (status: WhatsAppSession["status"]) => {
     const baseClasses =
-      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
+      "inline-flex items-center px-3 py-1 rounded-full text-xs font-medium";
 
     switch (status) {
       case "ready":
-        return `${baseClasses} bg-green-100 text-green-800`;
+        return `${baseClasses} bg-[#238636]/10 text-[#238636] border border-[#238636]/20`;
       case "authenticated":
-        return `${baseClasses} bg-blue-100 text-blue-800`;
+        return `${baseClasses} bg-[#1f6feb]/10 text-[#1f6feb] border border-[#1f6feb]/20`;
       case "qr":
-        return `${baseClasses} bg-yellow-100 text-yellow-800`;
+        return `${baseClasses} bg-[#f85149]/10 text-[#f85149] border border-[#f85149]/20`;
       case "initializing":
-        return `${baseClasses} bg-gray-100 text-gray-800`;
+        return `${baseClasses} bg-github-fg-muted/10 text-github-fg-muted border border-github-border-muted`;
       case "disconnected":
-        return `${baseClasses} bg-red-100 text-red-800`;
+        return `${baseClasses} bg-[#da3633]/10 text-[#da3633] border border-[#da3633]/20`;
       default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
+        return `${baseClasses} bg-github-fg-muted/10 text-github-fg-muted border border-github-border-muted`;
+    }
+  };
+
+  const getStatusIcon = (status: WhatsAppSession["status"]) => {
+    switch (status) {
+      case "ready":
+        return "✅";
+      case "authenticated":
+        return "🔐";
+      case "qr":
+        return "📱";
+      case "initializing":
+        return "⏳";
+      case "disconnected":
+        return "❌";
+      default:
+        return "❓";
     }
   };
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      {/* Header */}
-      <div className="md:flex md:items-center md:justify-between mb-8">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-            Session Status
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Monitor and manage your WhatsApp sessions
-          </p>
-        </div>
-        <div className="mt-4 flex space-x-3 md:mt-0 md:ml-4">
-          <button
-            onClick={loadSessions}
-            disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {loading ? "Refreshing..." : "Refresh All"}
-          </button>
-          <Link
-            href="/setup"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            New Session
-          </Link>
-        </div>
-      </div>
+    <div className="min-h-screen bg-github-canvas">
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]"></div>
 
-      {/* Alerts */}
-      {success && (
-        <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-800">✅ {success}</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-800">❌ {error}</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Sessions List */}
-        <div className="lg:col-span-1">
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                All Sessions
-              </h3>
-
+      <div className="relative px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="md:flex md:items-center md:justify-between mb-8">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] bg-clip-text text-transparent sm:text-4xl">
+              Session Status
+            </h1>
+            <p className="mt-2 text-github-fg-muted">
+              Monitor and manage your WhatsApp sessions
+            </p>
+          </div>
+          <div className="mt-4 flex space-x-3 md:mt-0 md:ml-4">
+            <button
+              onClick={loadSessions}
+              disabled={loading}
+              className="inline-flex items-center px-4 py-2 border border-github-border-default rounded-md shadow-sm text-sm font-medium text-github-fg-default bg-github-canvas-subtle hover:bg-github-canvas-inset focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1f6feb] disabled:opacity-50 transition-all duration-200"
+            >
               {loading ? (
-                <div className="text-center py-8">
-                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-500">Loading...</p>
-                </div>
-              ) : sessions.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-2">📱</div>
-                  <p className="text-gray-500 text-sm mb-3">
-                    No sessions found
-                  </p>
-                  <Link
-                    href="/setup"
-                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200"
-                  >
-                    Create Session
-                  </Link>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-[#1f6feb] border-t-transparent rounded-full animate-spin"></div>
+                  Refreshing...
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {sessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedSession?.id === session.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                      onClick={() => {
-                        setSelectedSession(session);
-                        router.push(`/status?sessionId=${session.id}`);
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm font-medium text-gray-900 truncate">
-                          {session.id}
-                        </div>
-                        <div className={getStatusBadge(session.status)}>
-                          {session.status}
-                        </div>
-                      </div>
-                      {session.clientInfo && (
-                        <div className="text-xs text-gray-500">
-                          {session.clientInfo.pushname}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                "Refresh All"
               )}
-            </div>
+            </button>
+            <Link
+              href="/setup"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] hover:from-[#1a5feb] hover:to-[#4fa6ff] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1f6feb] transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/25"
+            >
+              New Session
+            </Link>
           </div>
         </div>
 
-        {/* Session Details */}
-        <div className="lg:col-span-2">
-          {selectedSession ? (
-            <div className="space-y-6">
-              {/* Connection Status */}
-              <ConnectionStatus session={selectedSession} />
+        {/* Alerts */}
+        {success && (
+          <div className="mb-6 p-4 bg-[#238636]/10 border border-[#238636]/20 rounded-lg backdrop-blur-sm">
+            <p className="text-sm text-[#238636] flex items-center gap-2">
+              <span className="text-lg">✅</span>
+              {success}
+            </p>
+          </div>
+        )}
 
-              {/* Actions */}
-              <div className="bg-white shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+        {error && (
+          <div className="mb-6 p-4 bg-[#da3633]/10 border border-[#da3633]/20 rounded-lg backdrop-blur-sm">
+            <p className="text-sm text-[#da3633] flex items-center gap-2">
+              <span className="text-lg">❌</span>
+              {error}
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Sessions List */}
+          <div className="lg:col-span-1">
+            <div className="bg-github-canvas-subtle shadow-xl rounded-lg border border-github-border-default backdrop-blur-sm">
+              <div className="px-6 py-8">
+                <h3 className="text-xl font-semibold text-github-fg-default mb-6">
+                  All Sessions
+                </h3>
+
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="relative">
+                      <div className="w-12 h-12 border-2 border-[#1f6feb] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <div className="w-8 h-8 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin mx-auto absolute top-2 left-1/2 transform -translate-x-1/2"></div>
+                    </div>
+                    <p className="text-github-fg-muted">Loading sessions...</p>
+                  </div>
+                ) : sessions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-6 opacity-20">📱</div>
+                    <h4 className="text-lg font-semibold text-github-fg-default mb-3">
+                      No Sessions Found
+                    </h4>
+                    <p className="text-github-fg-muted text-sm mb-6">
+                      Create your first session to get started
+                    </p>
+                    <Link
+                      href="/setup"
+                      className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] text-white rounded-lg hover:from-[#1a5feb] hover:to-[#4fa6ff] transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/25"
+                    >
+                      Create Session
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {sessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className={`group p-4 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                          selectedSession?.id === session.id
+                            ? "bg-[#1f6feb]/10 border-[#1f6feb]/50 shadow-lg shadow-[#1f6feb]/10"
+                            : "bg-github-canvas-default border-github-border-default hover:border-[#1f6feb]/30 hover:bg-github-canvas-subtle"
+                        }`}
+                        onClick={() => {
+                          setSelectedSession(session);
+                          router.push(`/status?sessionId=${session.id}`);
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">
+                              {getStatusIcon(session.status)}
+                            </span>
+                            <span className={getStatusBadge(session.status)}>
+                              {session.status}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              refreshSession(session.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 text-github-fg-muted hover:text-[#1f6feb] transition-all duration-200 hover:scale-110"
+                          >
+                            🔄
+                          </button>
+                        </div>
+
+                        <h4 className="font-medium text-github-fg-default truncate mb-1">
+                          {session.id}
+                        </h4>
+
+                        {session.clientInfo?.pushname && (
+                          <p className="text-sm text-github-fg-muted truncate">
+                            {session.clientInfo.pushname}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Session Details */}
+          <div className="lg:col-span-2">
+            {selectedSession ? (
+              <div className="space-y-6">
+                {/* Session Info Card */}
+                <div className="bg-github-canvas-subtle rounded-lg border border-github-border-default p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-github-fg-default">
+                      Session Details
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <span className={getStatusBadge(selectedSession.status)}>
+                        {getStatusIcon(selectedSession.status)}{" "}
+                        {selectedSession.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <ConnectionStatus session={selectedSession} />
+                </div>
+
+                {/* Actions Card */}
+                <div className="bg-github-canvas-subtle rounded-lg border border-github-border-default p-6">
+                  <h3 className="text-lg font-semibold text-github-fg-default mb-4">
                     Actions
                   </h3>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Refresh Status */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <button
                       onClick={() => refreshSession(selectedSession.id)}
-                      className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      disabled={actionLoading === selectedSession.id}
+                      className="px-4 py-2 bg-github-canvas-default border border-github-border-default rounded-lg text-github-fg-default hover:bg-github-canvas-inset transition-all duration-200 disabled:opacity-50"
                     >
-                      🔄 Refresh Status
+                      🔄 Refresh
                     </button>
 
-                    {/* Send Message (only if ready) */}
                     {selectedSession.status === "ready" && (
                       <Link
                         href={`/send?sessionId=${selectedSession.id}`}
-                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        className="px-4 py-2 bg-gradient-to-r from-[#238636] to-[#2ea043] text-white rounded-lg hover:from-[#1f7a2e] hover:to-[#26893b] transition-all duration-200 text-center"
                       >
                         💬 Send Message
                       </Link>
                     )}
 
-                    {/* Logout */}
-                    {(selectedSession.status === "ready" ||
-                      selectedSession.status === "authenticated") && (
-                      <button
-                        onClick={() => handleLogout(selectedSession.id)}
-                        disabled={actionLoading === selectedSession.id}
-                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
-                      >
-                        {actionLoading === selectedSession.id
-                          ? "⏳ Logging out..."
-                          : "🚪 Logout"}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleLogout(selectedSession.id)}
+                      disabled={
+                        actionLoading === selectedSession.id ||
+                        selectedSession.status === "disconnected"
+                      }
+                      className="px-4 py-2 bg-[#f85149]/10 border border-[#f85149]/20 text-[#f85149] rounded-lg hover:bg-[#f85149]/20 transition-all duration-200 disabled:opacity-50"
+                    >
+                      {actionLoading === selectedSession.id ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-[#f85149] border-t-transparent rounded-full animate-spin"></div>
+                          Logging out...
+                        </div>
+                      ) : (
+                        "🚪 Logout"
+                      )}
+                    </button>
 
-                    {/* Reconnect (only if disconnected) */}
-                    {selectedSession.status === "disconnected" && (
-                      <Link
-                        href={`/setup?reconnect=${selectedSession.id}`}
-                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        🔄 Reconnect
-                      </Link>
-                    )}
-
-                    {/* Destroy Session */}
                     <button
                       onClick={() => handleDestroy(selectedSession.id)}
                       disabled={actionLoading === selectedSession.id}
-                      className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                      className="px-4 py-2 bg-[#da3633]/10 border border-[#da3633]/20 text-[#da3633] rounded-lg hover:bg-[#da3633]/20 transition-all duration-200 disabled:opacity-50"
                     >
-                      {actionLoading === selectedSession.id
-                        ? "⏳ Destroying..."
-                        : "🗑️ Destroy"}
+                      {actionLoading === selectedSession.id ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-[#da3633] border-t-transparent rounded-full animate-spin"></div>
+                          Destroying...
+                        </div>
+                      ) : (
+                        "🗑️ Destroy"
+                      )}
                     </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Session Details */}
-              {selectedSession.clientInfo && (
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      Device Information
-                    </h3>
-                    <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">
-                          Display Name
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900">
-                          {selectedSession.clientInfo.pushname}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">
-                          WhatsApp ID
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 font-mono">
-                          {selectedSession.clientInfo.wid}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">
-                          Platform
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900">
-                          {selectedSession.clientInfo.platform}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">
-                          Session ID
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 font-mono">
-                          {selectedSession.id}
-                        </dd>
-                      </div>
-                    </dl>
+                {/* Session Health */}
+                <div className="bg-github-canvas-subtle rounded-lg border border-github-border-default p-6">
+                  <h3 className="text-lg font-semibold text-github-fg-default mb-4">
+                    Health Status
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-github-canvas-default rounded-lg border border-github-border-muted">
+                      <span className="text-github-fg-default">
+                        Connection Status
+                      </span>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          selectedSession.status === "ready"
+                            ? "bg-[#238636]/10 text-[#238636]"
+                            : "bg-[#da3633]/10 text-[#da3633]"
+                        }`}
+                      >
+                        {selectedSession.status === "ready"
+                          ? "Healthy"
+                          : "Issues Detected"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-github-canvas-default rounded-lg border border-github-border-muted">
+                      <span className="text-github-fg-default">
+                        Last Updated
+                      </span>
+                      <span className="text-github-fg-muted text-sm">
+                        {new Date().toLocaleTimeString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📱</div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Select a Session
-                  </h3>
-                  <p className="text-gray-500">
-                    Choose a session from the list to view details and manage it
-                  </p>
-                </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="bg-github-canvas-subtle rounded-lg border border-github-border-default p-12 text-center">
+                <div className="text-6xl mb-6 opacity-20">👈</div>
+                <h3 className="text-xl font-semibold text-github-fg-default mb-3">
+                  Select a Session
+                </h3>
+                <p className="text-github-fg-muted">
+                  Choose a session from the list to view its details and manage
+                  it
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

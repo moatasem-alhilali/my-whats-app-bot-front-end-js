@@ -90,288 +90,222 @@ export default function SendPage() {
   const readySessions = getReadySessions();
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      {/* Header */}
-      <div className="md:flex md:items-center md:justify-between mb-8">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-            Send Messages
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Send text messages and media files through WhatsApp
-          </p>
-        </div>
-        <div className="mt-4 flex space-x-3 md:mt-0 md:ml-4">
-          <button
-            onClick={loadSessions}
-            disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {loading ? "Refreshing..." : "Refresh Sessions"}
-          </button>
-          <Link
-            href="/setup"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            New Session
-          </Link>
-        </div>
-      </div>
+    <div className="min-h-screen bg-github-canvas">
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]"></div>
 
-      {error && (
-        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-800">❌ {error}</p>
-        </div>
-      )}
-
-      {/* Session Selector */}
-      {!selectedSession && (
-        <div className="mb-8">
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Select a Session
-              </h3>
-
+      <div className="relative px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="md:flex md:items-center md:justify-between mb-8">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] bg-clip-text text-transparent sm:text-4xl">
+              Send Messages
+            </h1>
+            <p className="mt-2 text-github-fg-muted">
+              Send text messages and media files through WhatsApp
+            </p>
+          </div>
+          <div className="mt-4 flex space-x-3 md:mt-0 md:ml-4">
+            <button
+              onClick={loadSessions}
+              disabled={loading}
+              className="inline-flex items-center px-4 py-2 border border-github-border-default rounded-md shadow-sm text-sm font-medium text-github-fg-default bg-github-canvas-subtle hover:bg-github-canvas-inset focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1f6feb] disabled:opacity-50 transition-all duration-200"
+            >
               {loading ? (
-                <div className="text-center py-8">
-                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-500">Loading sessions...</p>
-                </div>
-              ) : readySessions.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="text-6xl mb-4">📱</div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">
-                    No Ready Sessions
-                  </h4>
-                  <p className="text-gray-500 mb-4">
-                    You need at least one connected session to send messages.
-                  </p>
-                  <div className="space-x-3">
-                    <Link
-                      href="/setup"
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                    >
-                      Create Session
-                    </Link>
-                    <Link
-                      href="/status"
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      View Sessions
-                    </Link>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-[#1f6feb] border-t-transparent rounded-full animate-spin"></div>
+                  Refreshing...
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {readySessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className="relative group bg-white p-4 border border-gray-300 rounded-lg hover:border-blue-500 cursor-pointer transition-colors"
-                      onClick={() => {
-                        setSelectedSession(session);
-                        router.push(`/send?sessionId=${session.id}`);
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-900">
-                            Ready
-                          </span>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            refreshSession(session.id);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity"
-                        >
-                          🔄
-                        </button>
-                      </div>
-
-                      <h4 className="font-medium text-gray-900 mb-2">
-                        {session.id}
-                      </h4>
-
-                      {session.clientInfo && (
-                        <div className="text-sm text-gray-500">
-                          <div>{session.clientInfo.pushname}</div>
-                          <div className="text-xs font-mono">
-                            {session.clientInfo.wid}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="mt-3">
-                        <div className="text-xs text-blue-600 group-hover:text-blue-700">
-                          Click to select →
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                "Refresh Sessions"
               )}
-            </div>
+            </button>
+            <Link
+              href="/setup"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] hover:from-[#1a5feb] hover:to-[#4fa6ff] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1f6feb] transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/25"
+            >
+              New Session
+            </Link>
           </div>
         </div>
-      )}
 
-      {/* Selected Session Interface */}
-      {selectedSession && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Message Form */}
-          <div className="lg:col-span-2">
-            <MessageForm
-              sessionId={selectedSession.id}
-              onMessageSent={handleMessageSent}
-              disabled={selectedSession.status !== "ready"}
-            />
-
-            {/* Session Selection */}
-            <div className="mt-6 bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Current Session
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setSelectedSession(null);
-                      router.push("/send");
-                    }}
-                    className="text-sm text-blue-600 hover:text-blue-700"
-                  >
-                    Change Session
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      selectedSession.status === "ready"
-                        ? "bg-green-500"
-                        : "bg-red-500"
-                    }`}
-                  ></div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">
-                      {selectedSession.id}
-                    </div>
-                    {selectedSession.clientInfo && (
-                      <div className="text-sm text-gray-500">
-                        {selectedSession.clientInfo.pushname}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => refreshSession(selectedSession.id)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    🔄
-                  </button>
-                </div>
-
-                {selectedSession.status !== "ready" && (
-                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      ⚠️ Session is not ready. Please check the session status
-                      and reconnect if needed.
-                    </p>
-                    <Link
-                      href={`/status?sessionId=${selectedSession.id}`}
-                      className="text-sm text-yellow-600 hover:text-yellow-700 underline"
-                    >
-                      Go to session status →
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
+        {error && (
+          <div className="mb-6 p-4 bg-[#161b22] border border-[#ff6b6b]/20 rounded-lg backdrop-blur-sm">
+            <p className="text-sm text-[#ff6b6b] flex items-center gap-2">
+              <span className="text-lg">❌</span>
+              {error}
+            </p>
           </div>
+        )}
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Connection Status */}
-            <ConnectionStatus session={selectedSession} />
-
-            {/* Message History */}
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Recent Activity
+        {/* Session Selector */}
+        {!selectedSession && (
+          <div className="mb-8">
+            <div className="bg-github-canvas-subtle shadow-xl rounded-lg border border-github-border-default backdrop-blur-sm">
+              <div className="px-6 py-8 sm:p-8">
+                <h3 className="text-xl font-semibold text-github-fg-default mb-6">
+                  Select a Session
                 </h3>
 
-                {messageHistory.length === 0 ? (
-                  <div className="text-center py-6">
-                    <div className="text-4xl mb-2">💬</div>
-                    <p className="text-sm text-gray-500">
-                      No messages sent yet
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="relative">
+                      <div className="w-12 h-12 border-2 border-[#1f6feb] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <div className="w-8 h-8 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin mx-auto absolute top-2 left-1/2 transform -translate-x-1/2"></div>
+                    </div>
+                    <p className="text-github-fg-muted">Loading sessions...</p>
+                  </div>
+                ) : readySessions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-6 opacity-20">📱</div>
+                    <h4 className="text-xl font-semibold text-github-fg-default mb-3">
+                      No Ready Sessions
+                    </h4>
+                    <p className="text-github-fg-muted mb-6 max-w-md mx-auto">
+                      You need at least one connected session to send messages.
                     </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Link
+                        href="/setup"
+                        className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] hover:from-[#1a5feb] hover:to-[#4fa6ff] transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/25"
+                      >
+                        Create Session
+                      </Link>
+                      <Link
+                        href="/status"
+                        className="inline-flex items-center px-6 py-3 border border-github-border-default text-sm font-medium rounded-md text-github-fg-default bg-github-canvas-subtle hover:bg-github-canvas-inset transition-all duration-200"
+                      >
+                        View Sessions
+                      </Link>
+                    </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {messageHistory.map((entry) => (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {readySessions.map((session) => (
                       <div
-                        key={entry.id}
-                        className={`p-3 rounded-lg text-sm ${
-                          entry.type === "success"
-                            ? "bg-green-50 border border-green-200"
-                            : "bg-red-50 border border-red-200"
-                        }`}
+                        key={session.id}
+                        className="group relative bg-github-canvas-default p-6 border border-github-border-default rounded-lg hover:border-[#1f6feb] cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/10 hover:-translate-y-1"
+                        onClick={() => {
+                          setSelectedSession(session);
+                          router.push(`/send?sessionId=${session.id}`);
+                        }}
                       >
-                        <div
-                          className={`font-medium ${
-                            entry.type === "success"
-                              ? "text-green-800"
-                              : "text-red-800"
-                          }`}
-                        >
-                          {entry.type === "success" ? "✅" : "❌"}{" "}
-                          {entry.message}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <div className="w-3 h-3 bg-gradient-to-r from-[#238636] to-[#2ea043] rounded-full"></div>
+                              <div className="absolute inset-0 w-3 h-3 bg-gradient-to-r from-[#238636] to-[#2ea043] rounded-full animate-pulse"></div>
+                            </div>
+                            <span className="text-sm font-medium text-[#238636]">
+                              Ready
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              refreshSession(session.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 text-github-fg-muted hover:text-[#1f6feb] transition-all duration-200 hover:scale-110"
+                          >
+                            🔄
+                          </button>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {entry.timestamp.toLocaleTimeString()}
-                        </div>
+
+                        <h4 className="font-medium text-github-fg-default mb-3 truncate">
+                          {session.id}
+                        </h4>
+
+                        {session.clientInfo && (
+                          <div className="text-sm text-github-fg-muted space-y-1">
+                            <div className="truncate">
+                              {session.clientInfo.pushname}
+                            </div>
+                            <div className="font-mono text-xs text-github-fg-subtle">
+                              {session.clientInfo.wid}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#1f6feb]/5 to-[#58a6ff]/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Quick Actions */}
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Quick Actions
+        {/* Message Interface */}
+        {selectedSession && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Message Form */}
+            <div className="lg:col-span-2">
+              <MessageForm
+                sessionId={selectedSession.id}
+                onMessageSent={handleMessageSent}
+                disabled={selectedSession.status !== "ready"}
+              />
+            </div>
+
+            {/* Session Info & History */}
+            <div className="space-y-6">
+              {/* Session Info */}
+              <div className="bg-github-canvas-subtle rounded-lg border border-github-border-default p-6">
+                <h3 className="text-lg font-semibold text-github-fg-default mb-4">
+                  Active Session
                 </h3>
-                <div className="space-y-2">
-                  <Link
-                    href={`/status?sessionId=${selectedSession.id}`}
-                    className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                <ConnectionStatus session={selectedSession} />
+                <div className="mt-4 pt-4 border-t border-github-border-muted">
+                  <button
+                    onClick={() => {
+                      setSelectedSession(null);
+                      router.push("/send");
+                    }}
+                    className="w-full px-4 py-2 text-sm text-github-fg-muted hover:text-github-fg-default border border-github-border-default rounded-md hover:bg-github-canvas-inset transition-all duration-200"
                   >
-                    📊 View Session Details
-                  </Link>
-                  <Link
-                    href="/status"
-                    className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    📱 All Sessions
-                  </Link>
-                  <Link
-                    href="/setup"
-                    className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    ➕ Create New Session
-                  </Link>
+                    Switch Session
+                  </button>
                 </div>
               </div>
+
+              {/* Message History */}
+              {messageHistory.length > 0 && (
+                <div className="bg-github-canvas-subtle rounded-lg border border-github-border-default p-6">
+                  <h3 className="text-lg font-semibold text-github-fg-default mb-4">
+                    Recent Messages
+                  </h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
+                    {messageHistory.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="p-3 rounded-lg bg-github-canvas-default border border-github-border-muted"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm text-github-fg-default flex-1">
+                            {entry.message}
+                          </p>
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${
+                              entry.type === "success"
+                                ? "bg-[#238636]/10 text-[#238636]"
+                                : "bg-[#da3633]/10 text-[#da3633]"
+                            }`}
+                          >
+                            {entry.type === "success" ? "✓" : "✗"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-github-fg-subtle mt-1">
+                          {entry.timestamp.toLocaleTimeString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { WhatsAppSession } from "@/lib/api";
 
 interface ConnectionStatusProps {
-  session: WhatsAppSession | null;
+  session?: WhatsAppSession | null;
   loading?: boolean;
 }
 
@@ -14,17 +14,17 @@ export default function ConnectionStatus({
   const getStatusColor = (status: WhatsAppSession["status"]) => {
     switch (status) {
       case "ready":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "status-ready text-white";
       case "authenticated":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "status-connecting text-white";
       case "qr":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "status-connecting text-white";
       case "initializing":
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-500/20 text-gray-300 border border-gray-500/30";
       case "disconnected":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "status-disconnected text-white";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-500/20 text-gray-300 border border-gray-500/30";
     }
   };
 
@@ -64,14 +64,22 @@ export default function ConnectionStatus({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6 border">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
-          <div className="space-y-2">
-            <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+      <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6 card-hover">
+        <h3 className="text-lg font-semibold mb-4 text-white">
+          Connection Status
+        </h3>
+        <div className="text-center py-8">
+          <div className="relative mx-auto mb-4 w-12 h-12">
+            <div className="w-12 h-12 border-4 border-[#21262d] border-t-blue-500 rounded-full animate-spin"></div>
+            <div
+              className="absolute inset-0 w-12 h-12 border-4 border-transparent border-t-green-500 rounded-full animate-spin"
+              style={{
+                animationDirection: "reverse",
+                animationDuration: "1.5s",
+              }}
+            ></div>
           </div>
+          <p className="text-gray-400">Loading status...</p>
         </div>
       </div>
     );
@@ -79,13 +87,15 @@ export default function ConnectionStatus({
 
   if (!session) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6 border">
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">
+      <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6 card-hover">
+        <h3 className="text-lg font-semibold mb-4 text-white">
           Connection Status
         </h3>
         <div className="text-center py-8">
-          <div className="text-6xl mb-4">📱</div>
-          <p className="text-gray-600">No session found</p>
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-gray-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="text-4xl">📱</div>
+          </div>
+          <p className="text-gray-400 font-medium">No session found</p>
           <p className="text-sm text-gray-500 mt-2">
             Create a session to get started
           </p>
@@ -95,18 +105,18 @@ export default function ConnectionStatus({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 border">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">
+    <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6 card-hover hover-lift">
+      <h3 className="text-lg font-semibold mb-4 text-white">
         Connection Status
       </h3>
 
-      <div className="space-y-4">
-        {/* Status Badge */}
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{getStatusIcon(session.status)}</span>
+      <div className="space-y-6">
+        {/* Status Indicator */}
+        <div className="flex items-center space-x-4">
+          <div className="text-3xl">{getStatusIcon(session.status)}</div>
           <div className="flex-1">
             <div
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(
+              className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(
                 session.status
               )}`}
             >
@@ -116,47 +126,48 @@ export default function ConnectionStatus({
         </div>
 
         {/* Session Info */}
-        <div className="bg-gray-50 rounded-lg p-4">
+        <div className="bg-[#0d1117] border border-[#21262d] rounded-lg p-4">
           <div className="grid grid-cols-1 gap-3">
             <div>
-              <span className="text-sm font-medium text-gray-500">
+              <span className="text-sm font-medium text-gray-400">
                 Session ID:
               </span>
-              <div className="text-sm text-gray-900 font-mono bg-white px-2 py-1 rounded border mt-1">
+              <div className="text-sm text-white font-mono bg-[#21262d] px-3 py-2 rounded-lg border border-[#30363d] mt-1">
                 {session.id}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Client Info (when connected) */}
+        {/* Client Info */}
         {session.clientInfo && (
-          <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-            <h4 className="font-medium text-green-800 mb-3 flex items-center gap-2">
-              <span>📱</span> WhatsApp Account Info
+          <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-green-400 mb-3 flex items-center">
+              <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+              Device Information
             </h4>
             <div className="grid grid-cols-1 gap-3">
               <div>
-                <span className="text-sm font-medium text-green-700">
+                <span className="text-sm font-medium text-green-300">
                   Display Name:
                 </span>
-                <div className="text-sm text-green-900 mt-1">
+                <div className="text-sm text-white mt-1 font-medium">
                   {session.clientInfo.pushname}
                 </div>
               </div>
               <div>
-                <span className="text-sm font-medium text-green-700">
+                <span className="text-sm font-medium text-green-300">
                   WhatsApp ID:
                 </span>
-                <div className="text-sm text-green-900 font-mono mt-1">
+                <div className="text-sm text-gray-300 font-mono mt-1 bg-[#21262d] px-2 py-1 rounded border border-[#30363d]">
                   {session.clientInfo.wid}
                 </div>
               </div>
               <div>
-                <span className="text-sm font-medium text-green-700">
+                <span className="text-sm font-medium text-green-300">
                   Platform:
                 </span>
-                <div className="text-sm text-green-900 mt-1">
+                <div className="text-sm text-white mt-1">
                   {session.clientInfo.platform}
                 </div>
               </div>
@@ -164,9 +175,21 @@ export default function ConnectionStatus({
           </div>
         )}
 
-        {/* Last Updated */}
-        <div className="text-xs text-gray-500 text-center">
-          Last updated: {new Date().toLocaleTimeString()}
+        {/* Connection Health */}
+        <div className="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-[#21262d]">
+          <span>Last updated: {new Date().toLocaleTimeString()}</span>
+          <div className="flex items-center space-x-1">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                session.status === "ready"
+                  ? "bg-green-500 animate-pulse"
+                  : session.status === "disconnected"
+                  ? "bg-red-500"
+                  : "bg-yellow-500 animate-pulse"
+              }`}
+            ></div>
+            <span className="capitalize">{session.status}</span>
+          </div>
         </div>
       </div>
     </div>

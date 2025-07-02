@@ -77,6 +77,11 @@ export default function MessageForm({
         setSuccess(`Media sent successfully! ID: ${response.data.messageId}`);
         setMediaData({ to: mediaData.to, caption: "", file: null }); // Keep phone number, clear rest
         onMessageSent?.(response.data.messageId);
+        // Reset file input
+        const fileInput = document.getElementById(
+          "media-file"
+        ) as HTMLInputElement;
+        if (fileInput) fileInput.value = "";
       } else {
         setError(response.error || "Failed to send media");
       }
@@ -87,53 +92,63 @@ export default function MessageForm({
     }
   };
 
-  const formatPhoneNumber = (phone: string) => {
-    // Remove all non-digits
-    const digits = phone.replace(/\D/g, "");
-
-    // Format as international number
-    if (digits.length === 10) {
-      return `+1${digits}`; // Default to US
-    } else if (digits.length === 11 && digits.startsWith("1")) {
-      return `+${digits}`;
-    } else if (digits.length > 0 && !digits.startsWith("+")) {
-      return `+${digits}`;
-    }
-    return digits;
-  };
-
   return (
-    <div className="bg-white rounded-lg shadow-lg border">
+    <div className="bg-github-canvas-subtle rounded-lg shadow-xl border border-github-border-default backdrop-blur-sm">
       {/* Header */}
-      <div className="border-b p-4">
-        <h3 className="text-lg font-semibold text-gray-800">Send Message</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Session: <span className="font-mono">{sessionId}</span>
-        </p>
+      <div className="border-b border-github-border-muted p-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] rounded-lg flex items-center justify-center">
+            <span className="text-white text-lg">💬</span>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold text-github-fg-default">
+              Send Message
+            </h3>
+            <p className="text-sm text-github-fg-muted">
+              Session:{" "}
+              <span className="font-mono text-[#1f6feb]">{sessionId}</span>
+            </p>
+          </div>
+        </div>
+
+        {disabled && (
+          <div className="mt-4 p-3 bg-[#f85149]/10 border border-[#f85149]/20 rounded-lg">
+            <p className="text-sm text-[#f85149] flex items-center gap-2">
+              <span>⚠️</span>
+              Session is not ready. Please ensure the session is connected.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="border-b">
+      <div className="border-b border-github-border-muted">
         <div className="flex">
           <button
             onClick={() => setActiveTab("text")}
-            className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex-1 py-4 px-6 text-sm font-medium border-b-2 transition-all duration-200 ${
               activeTab === "text"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "border-[#1f6feb] text-[#1f6feb] bg-[#1f6feb]/5"
+                : "border-transparent text-github-fg-muted hover:text-github-fg-default hover:bg-github-canvas-inset"
             }`}
           >
-            📝 Text Message
+            <span className="flex items-center gap-2">
+              <span>📝</span>
+              Text Message
+            </span>
           </button>
           <button
             onClick={() => setActiveTab("media")}
-            className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex-1 py-4 px-6 text-sm font-medium border-b-2 transition-all duration-200 ${
               activeTab === "media"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "border-[#1f6feb] text-[#1f6feb] bg-[#1f6feb]/5"
+                : "border-transparent text-github-fg-muted hover:text-github-fg-default hover:bg-github-canvas-inset"
             }`}
           >
-            📎 Media Message
+            <span className="flex items-center gap-2">
+              <span>📎</span>
+              Media Message
+            </span>
           </button>
         </div>
       </div>
@@ -142,24 +157,30 @@ export default function MessageForm({
       <div className="p-6">
         {/* Success/Error Messages */}
         {success && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800">✅ {success}</p>
+          <div className="mb-6 p-4 bg-[#238636]/10 border border-[#238636]/20 rounded-lg backdrop-blur-sm">
+            <p className="text-sm text-[#238636] flex items-center gap-2">
+              <span className="text-lg">✅</span>
+              {success}
+            </p>
           </div>
         )}
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800">❌ {error}</p>
+          <div className="mb-6 p-4 bg-[#da3633]/10 border border-[#da3633]/20 rounded-lg backdrop-blur-sm">
+            <p className="text-sm text-[#da3633] flex items-center gap-2">
+              <span className="text-lg">❌</span>
+              {error}
+            </p>
           </div>
         )}
 
         {/* Text Message Form */}
         {activeTab === "text" && (
-          <form onSubmit={handleTextSubmit} className="space-y-4">
+          <form onSubmit={handleTextSubmit} className="space-y-6">
             <div>
               <label
                 htmlFor="text-to"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-github-fg-default mb-2"
               >
                 Phone Number
               </label>
@@ -171,11 +192,12 @@ export default function MessageForm({
                 onChange={(e) =>
                   setTextData((prev) => ({ ...prev, to: e.target.value }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-github-canvas-default border border-github-border-default rounded-lg focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default placeholder-github-fg-muted transition-all duration-200"
                 disabled={disabled || loading}
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-github-fg-muted mt-2 flex items-center gap-1">
+                <span>💡</span>
                 Enter phone number with country code (e.g., +1234567890)
               </p>
             </div>
@@ -183,7 +205,7 @@ export default function MessageForm({
             <div>
               <label
                 htmlFor="text-message"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-github-fg-default mb-2"
               >
                 Message
               </label>
@@ -195,13 +217,18 @@ export default function MessageForm({
                 onChange={(e) =>
                   setTextData((prev) => ({ ...prev, message: e.target.value }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 bg-github-canvas-default border border-github-border-default rounded-lg focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default placeholder-github-fg-muted resize-none transition-all duration-200"
                 disabled={disabled || loading}
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {textData.message.length}/1000 characters
-              </p>
+              <div className="flex justify-between items-center mt-2">
+                <p className="text-xs text-github-fg-muted">
+                  {textData.message.length} characters
+                </p>
+                <p className="text-xs text-github-fg-muted">
+                  Max: 4096 characters
+                </p>
+              </div>
             </div>
 
             <button
@@ -209,15 +236,21 @@ export default function MessageForm({
               disabled={
                 disabled || loading || !textData.to || !textData.message
               }
-              className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-3 px-6 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] text-white rounded-lg hover:from-[#1a5feb] hover:to-[#4fa6ff] focus:ring-2 focus:ring-[#1f6feb] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/25"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Sending...
+                <span className="flex items-center justify-center gap-3">
+                  <div className="relative">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 w-3 h-3 border-2 border-white/50 border-t-transparent rounded-full animate-spin top-1 left-1"></div>
+                  </div>
+                  Sending Message...
                 </span>
               ) : (
-                "Send Text Message"
+                <span className="flex items-center justify-center gap-2">
+                  <span>📤</span>
+                  Send Text Message
+                </span>
               )}
             </button>
           </form>
@@ -225,11 +258,11 @@ export default function MessageForm({
 
         {/* Media Message Form */}
         {activeTab === "media" && (
-          <form onSubmit={handleMediaSubmit} className="space-y-4">
+          <form onSubmit={handleMediaSubmit} className="space-y-6">
             <div>
               <label
                 htmlFor="media-to"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-github-fg-default mb-2"
               >
                 Phone Number
               </label>
@@ -241,7 +274,7 @@ export default function MessageForm({
                 onChange={(e) =>
                   setMediaData((prev) => ({ ...prev, to: e.target.value }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-github-canvas-default border border-github-border-default rounded-lg focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default placeholder-github-fg-muted transition-all duration-200"
                 disabled={disabled || loading}
                 required
               />
@@ -250,72 +283,97 @@ export default function MessageForm({
             <div>
               <label
                 htmlFor="media-file"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-github-fg-default mb-2"
               >
                 File
               </label>
-              <input
-                id="media-file"
-                type="file"
-                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
-                onChange={(e) =>
-                  setMediaData((prev) => ({
-                    ...prev,
-                    file: e.target.files?.[0] || null,
-                  }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={disabled || loading}
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Supported: Images, Videos, Audio, PDF, Word, Excel (Max 10MB)
+              <div className="relative">
+                <input
+                  id="media-file"
+                  type="file"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setMediaData((prev) => ({ ...prev, file }));
+                  }}
+                  className="w-full px-4 py-3 bg-github-canvas-default border border-github-border-default rounded-lg focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1f6feb] file:text-white hover:file:bg-[#1a5feb] transition-all duration-200"
+                  disabled={disabled || loading}
+                  required
+                />
+              </div>
+              <p className="text-xs text-github-fg-muted mt-2 flex items-center gap-1">
+                <span>📎</span>
+                Supported: Images, Videos, Audio, PDF, Documents (Max: 16MB)
               </p>
+
+              {mediaData.file && (
+                <div className="mt-3 p-3 bg-github-canvas-default border border-github-border-muted rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📄</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-github-fg-default truncate">
+                        {mediaData.file.name}
+                      </p>
+                      <p className="text-xs text-github-fg-muted">
+                        {(mediaData.file.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaData((prev) => ({ ...prev, file: null }));
+                        const fileInput = document.getElementById(
+                          "media-file"
+                        ) as HTMLInputElement;
+                        if (fileInput) fileInput.value = "";
+                      }}
+                      className="text-[#da3633] hover:text-[#ff6b6b] transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
               <label
                 htmlFor="media-caption"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-github-fg-default mb-2"
               >
                 Caption (Optional)
               </label>
               <textarea
                 id="media-caption"
                 rows={3}
-                placeholder="Enter caption for your media..."
+                placeholder="Add a caption to your media..."
                 value={mediaData.caption}
                 onChange={(e) =>
                   setMediaData((prev) => ({ ...prev, caption: e.target.value }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 bg-github-canvas-default border border-github-border-default rounded-lg focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default placeholder-github-fg-muted resize-none transition-all duration-200"
                 disabled={disabled || loading}
               />
             </div>
 
-            {mediaData.file && (
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-sm text-gray-700">
-                  <strong>Selected file:</strong> {mediaData.file.name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Size: {(mediaData.file.size / (1024 * 1024)).toFixed(2)} MB
-                </p>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={disabled || loading || !mediaData.to || !mediaData.file}
-              className="w-full py-2 px-4 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-3 px-6 bg-gradient-to-r from-[#238636] to-[#2ea043] text-white rounded-lg hover:from-[#1f7a2e] hover:to-[#26893b] focus:ring-2 focus:ring-[#238636] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-lg hover:shadow-[#238636]/25"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Uploading...
+                <span className="flex items-center justify-center gap-3">
+                  <div className="relative">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 w-3 h-3 border-2 border-white/50 border-t-transparent rounded-full animate-spin top-1 left-1"></div>
+                  </div>
+                  Sending Media...
                 </span>
               ) : (
-                "Send Media Message"
+                <span className="flex items-center justify-center gap-2">
+                  <span>🚀</span>
+                  Send Media Message
+                </span>
               )}
             </button>
           </form>
