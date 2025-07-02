@@ -21,6 +21,18 @@
   --popover: #161b22;
   --popover-foreground: #f0f6fc;
   --radius: 6px;
+  --github-canvas: #0d1117;
+  --github-canvas-default: #161b22;
+  --github-canvas-subtle: #161b22;
+  --github-canvas-inset: #010409;
+  --github-border-default: #21262d;
+  --github-border-muted: #30363d;
+  --github-fg-default: #e6edf3;
+  --github-fg-muted: #7d8590;
+  --github-fg-subtle: #6e7681;
+  --github-accent-emphasis: #1f6feb;
+  --github-success-emphasis: #238636;
+  --github-danger-emphasis: #da3633;
 }
 
 @theme inline {
@@ -157,4 +169,306 @@ body {
   border-color: var(--accent);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(31, 111, 235, 0.15);
+}
+
+/* Apply GitHub color classes */
+.bg-github-canvas {
+  background-color: var(--github-canvas);
+}
+.bg-github-canvas-default {
+  background-color: var(--github-canvas-default);
+}
+.bg-github-canvas-subtle {
+  background-color: var(--github-canvas-subtle);
+}
+.bg-github-canvas-inset {
+  background-color: var(--github-canvas-inset);
+}
+.border-github-border-default {
+  border-color: var(--github-border-default);
+}
+.border-github-border-muted {
+  border-color: var(--github-border-muted);
+}
+.text-github-fg-default {
+  color: var(--github-fg-default);
+}
+.text-github-fg-muted {
+  color: var(--github-fg-muted);
+}
+.text-github-fg-subtle {
+  color: var(--github-fg-subtle);
+}
+
+/* Grid pattern background */
+.bg-grid-pattern {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(255, 255, 255, 0.15) 1px,
+    transparent 0
+  );
+  background-size: 20px 20px;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--github-canvas-inset);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--github-border-muted);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--github-fg-subtle);
+}
+
+/* Gradient text support */
+.bg-clip-text {
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Logo animation */
+@keyframes logo-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 20px rgba(31, 111, 235, 0.5),
+      0 0 40px rgba(31, 111, 235, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 30px rgba(31, 111, 235, 0.8),
+      0 0 60px rgba(31, 111, 235, 0.5);
+  }
+}
+
+.logo-glow {
+  animation: logo-glow 3s ease-in-out infinite;
+}
+
+/* Pulse animation for status indicators */
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* Toast animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.3s ease-in;
+}
+
+/* Card hover animations */
+@keyframes card-lift {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
+.card-lift:hover {
+  animation: card-lift 0.2s ease-out forwards;
+}
+
+/* Stat card counter animation */
+@keyframes counter-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-counter-up {
+  animation: counter-up 0.6s ease-out;
+}
+
+/* Loading spinner variations */
+@keyframes dual-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-dual-ring {
+  animation: dual-ring 1.2s linear infinite;
+}
+
+/* Command palette animations */
+@keyframes modal-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-appear {
+  animation: modal-appear 0.2s ease-out;
+}
+
+/* File upload drag states */
+.file-drag-over {
+  border-color: var(--github-accent-emphasis);
+  background-color: rgba(31, 111, 235, 0.05);
+}
+
+/* Gradient animations */
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--github-accent-emphasis);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+button,
+input,
+textarea,
+select {
+  transition: all 0.2s ease;
+}
+
+/* Hide scrollbar for command palette */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Enhanced shadows */
+.shadow-glow {
+  box-shadow: 0 0 20px rgba(31, 111, 235, 0.1), 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.shadow-glow-green {
+  box-shadow: 0 0 20px rgba(35, 134, 54, 0.1), 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Improved button states */
+.btn-primary {
+  background: linear-gradient(135deg, #1f6feb 0%, #58a6ff 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #1a5feb 0%, #4fa6ff 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(31, 111, 235, 0.25);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Status indicator improvements */
+.status-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-indicator::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* Modern form inputs */
+.form-input {
+  background-color: var(--github-canvas-default);
+  border: 1px solid var(--github-border-default);
+  color: var(--github-fg-default);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: var(--github-accent-emphasis);
+  box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.1);
+  outline: none;
+}
+
+.form-input::placeholder {
+  color: var(--github-fg-muted);
 }

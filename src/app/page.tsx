@@ -1,5 +1,11 @@
 "use client";
 
+import ConnectionStatus from "@/components/ConnectionStatus";
+import CommandPalette from "@/components/ui/CommandPalette";
+import { StatsSkeleton } from "@/components/ui/LoadingSkeleton";
+import StatCard from "@/components/ui/StatCard";
+import { ToastContainer } from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 import { whatsappApi, WhatsAppSession } from "@/lib/api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -152,6 +158,9 @@ export default function Dashboard() {
   const [sessions, setSessions] = useState<WhatsAppSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  const { toasts, removeToast, success, error: showError } = useToast();
 
   useEffect(() => {
     loadSessions();
@@ -161,302 +170,365 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Global keyboard shortcut for command palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const loadSessions = async () => {
     try {
-      setLoading(true);
+      if (!loading) setLoading(true); // Only show loading on manual refresh
       setError("");
+
       const response = await whatsappApi.getAllSessions();
+
       if (response.success && response.data) {
         setSessions(response.data);
+        if (!loading) {
+          success("Sessions refreshed", "Data updated successfully");
+        }
       } else {
-        setError(response.error || "Failed to load sessions");
+        const errorMsg = response.error || "Failed to load sessions";
+        setError(errorMsg);
+        showError("Failed to load sessions", errorMsg);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load sessions");
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to load sessions";
+      setError(errorMsg);
+      showError("Connection error", errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusStats = () => {
-    const stats = {
-      total: sessions.length,
-      ready: sessions.filter((s) => s.status === "ready").length,
-      connecting: sessions.filter((s) =>
-        ["initializing", "qr", "authenticated"].includes(s.status)
-      ).length,
-      disconnected: sessions.filter((s) => s.status === "disconnected").length,
-    };
-    return stats;
+  const getSessionStats = () => {
+    const total = sessions.length;
+    const ready = sessions.filter((s) => s.status === "ready").length;
+    const connecting = sessions.filter(
+      (s) => s.status === "qr" || s.status === "initializing"
+    ).length;
+    const disconnected = sessions.filter(
+      (s) => s.status === "disconnected"
+    ).length;
+
+    return { total, ready, connecting, disconnected };
   };
 
-  const stats = getStatusStats();
-
-  if (loading && sessions.length === 0) {
-    return (
-      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative mb-8">
-            <div className="w-20 h-20 border-4 border-[#21262d] border-t-blue-500 rounded-full animate-spin mx-auto"></div>
-            <div
-              className="absolute inset-0 w-20 h-20 border-4 border-transparent border-t-green-500 rounded-full animate-spin mx-auto"
-              style={{
-                animationDirection: "reverse",
-                animationDuration: "1.5s",
-              }}
-            ></div>
-          </div>
-          <h2 className="text-xl font-semibold text-white mb-2">
-            Loading Dashboard
-          </h2>
-          <p className="text-gray-400">Fetching your WhatsApp sessions...</p>
-        </div>
-      </div>
-    );
-  }
+  const stats = getSessionStats();
+  const readySessions = sessions.filter((s) => s.status === "ready");
 
   return (
-    <div className="min-h-screen bg-[#0d1117]">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#161b22] via-[#0d1117] to-[#161b22] border-b border-[#21262d]">
-        <div className="absolute inset-0 grid-pattern opacity-30"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">
-            <div className="inline-flex items-center space-x-2 bg-blue-500/20 text-blue-400 text-sm font-medium px-4 py-2 rounded-full border border-blue-500/30 mb-6">
-              <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
-              <span>Dashboard Overview</span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-              WhatsApp
-              <span className="bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
-                {" "}
-                Dashboard
-              </span>
-            </h1>
-            <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
-              Manage your WhatsApp sessions, monitor connections, and send
-              messages with a modern, GitHub-inspired interface.
-            </p>
-            <ActivityIndicator sessions={sessions} />
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-github-canvas">
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]"></div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-8 p-4 bg-red-500/20 border border-red-500/30 rounded-xl">
-            <div className="flex items-center space-x-2">
-              <span className="text-red-400">⚠️</span>
-              <p className="text-red-400 font-medium">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatsCard
-            title="Total Sessions"
-            value={stats.total}
-            icon="📱"
-            color="blue"
-            description="All registered sessions"
-            trend={{ direction: "stable", percentage: 0 }}
-          />
-          <StatsCard
-            title="Ready to Use"
-            value={stats.ready}
-            icon="✅"
-            color="green"
-            description="Connected and active"
-            trend={
-              stats.ready > 0 ? { direction: "up", percentage: 100 } : undefined
-            }
-          />
-          <StatsCard
-            title="Connecting"
-            value={stats.connecting}
-            icon="⏳"
-            color="yellow"
-            description="Pairing or initializing"
-            trend={
-              stats.connecting > 0
-                ? { direction: "up", percentage: 50 }
-                : undefined
-            }
-          />
-          <StatsCard
-            title="Disconnected"
-            value={stats.disconnected}
-            icon="❌"
-            color="red"
-            description="Offline or failed"
-            trend={
-              stats.disconnected > 0
-                ? { direction: "down", percentage: 25 }
-                : undefined
-            }
-          />
-        </div>
-
-        {/* Quick Actions */}
+      <div className="relative px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white">Quick Actions</h2>
-            <button
-              onClick={loadSessions}
-              disabled={loading}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-[#21262d] text-gray-300 rounded-lg hover:bg-[#2d333b] transition-colors disabled:opacity-50"
-            >
-              <svg
-                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              <span>{loading ? "Refreshing..." : "Refresh"}</span>
-            </button>
-          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] bg-clip-text text-transparent">
+                WhatsApp Dashboard
+              </h1>
+              <p className="mt-2 text-github-fg-muted">
+                Manage your WhatsApp sessions and send messages
+              </p>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <ActionCard
-              title="Setup New Session"
-              description="Create a new WhatsApp session and pair your device with QR code scanning"
-              icon="🔗"
-              href="/setup"
-              gradient="from-blue-500 to-blue-600"
-              badge="Primary"
-            />
-            <ActionCard
-              title="Monitor Status"
-              description="Check connection status, view session details, and manage active connections"
-              icon="📊"
-              href="/status"
-              gradient="from-green-500 to-green-600"
-            />
-            <ActionCard
-              title="Send Messages"
-              description="Send text messages and media files to contacts through active sessions"
-              icon="💬"
-              href="/send"
-              gradient="from-purple-500 to-purple-600"
-            />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCommandPaletteOpen(true)}
+                className="px-4 py-2 bg-github-canvas-subtle border border-github-border-default rounded-lg text-github-fg-muted hover:text-github-fg-default hover:bg-github-canvas-inset transition-all duration-200 flex items-center gap-2"
+              >
+                <span>🔍</span>
+                <span className="hidden sm:inline">Quick Actions</span>
+                <kbd className="px-2 py-1 bg-github-canvas-default border border-github-border-muted rounded text-xs">
+                  ⌘K
+                </kbd>
+              </button>
+
+              <button
+                onClick={loadSessions}
+                disabled={loading}
+                className="px-4 py-2 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] text-white rounded-lg hover:from-[#1a5feb] hover:to-[#4fa6ff] disabled:opacity-50 transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/25"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Refreshing...
+                  </div>
+                ) : (
+                  "Refresh"
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Sessions Overview */}
-        <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-white">
-              Active Sessions
-            </h3>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-400">
-                Last updated: {new Date().toLocaleTimeString()}
-              </span>
-            </div>
-          </div>
-
-          {sessions.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-green-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">📱</span>
-              </div>
-              <h4 className="text-lg font-medium text-white mb-2">
-                No sessions found
-              </h4>
-              <p className="text-gray-400 mb-6">
-                Get started by creating your first WhatsApp session
-              </p>
-              <Link
-                href="/setup"
-                className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                <span>Create Session</span>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-              </Link>
-            </div>
+        {/* Stats Cards */}
+        <div className="mb-8">
+          {loading ? (
+            <StatsSkeleton />
           ) : (
-            <div className="space-y-3">
-              {sessions.slice(0, 5).map((session) => (
-                <div
-                  key={session.id}
-                  className="flex items-center justify-between p-4 bg-[#0d1117] border border-[#21262d] rounded-lg hover:border-[#30363d] transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        session.status === "ready"
-                          ? "bg-green-500"
-                          : session.status === "disconnected"
-                          ? "bg-red-500"
-                          : "bg-yellow-500"
-                      } animate-pulse`}
-                    ></div>
-                    <div>
-                      <p className="text-sm font-medium text-white font-mono">
-                        {session.id}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {session.clientInfo?.pushname || "No device info"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        session.status === "ready"
-                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                          : session.status === "disconnected"
-                          ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                          : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                      }`}
-                    >
-                      {session.status}
-                    </span>
-                    <Link
-                      href={`/status?sessionId=${session.id}`}
-                      className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                    >
-                      View →
-                    </Link>
-                  </div>
-                </div>
-              ))}
-
-              {sessions.length > 5 && (
-                <div className="text-center pt-4">
-                  <Link
-                    href="/status"
-                    className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                  >
-                    View all {sessions.length} sessions →
-                  </Link>
-                </div>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatCard
+                title="Total Sessions"
+                value={stats.total}
+                icon="📱"
+                color="blue"
+                change={stats.total > 0 ? 5 : undefined}
+                changeLabel="Active connections"
+              />
+              <StatCard
+                title="Ready Sessions"
+                value={stats.ready}
+                icon="✅"
+                color="green"
+                change={stats.ready > 0 ? 12 : undefined}
+                changeLabel="Ready to send"
+              />
+              <StatCard
+                title="Connecting"
+                value={stats.connecting}
+                icon="⏳"
+                color="yellow"
+                change={stats.connecting > 0 ? -3 : undefined}
+                changeLabel="Awaiting QR scan"
+              />
+              <StatCard
+                title="Disconnected"
+                value={stats.disconnected}
+                icon="❌"
+                color="red"
+                change={stats.disconnected > 0 ? -8 : undefined}
+                changeLabel="Need reconnection"
+              />
             </div>
           )}
         </div>
+
+        {/* Error State */}
+        {error && (
+          <div className="mb-8 p-4 bg-[#da3633]/10 border border-[#da3633]/20 rounded-lg backdrop-blur-sm">
+            <p className="text-sm text-[#da3633] flex items-center gap-2">
+              <span className="text-lg">❌</span>
+              {error}
+            </p>
+          </div>
+        )}
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Quick Actions */}
+          <div className="lg:col-span-2">
+            <h2 className="text-xl font-semibold text-github-fg-default mb-6 flex items-center gap-2">
+              <span>🚀</span>
+              Quick Actions
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Setup Session Card */}
+              <Link href="/setup" className="group block">
+                <div className="relative bg-github-canvas-subtle border border-github-border-default rounded-lg p-6 hover:shadow-lg hover:shadow-[#1f6feb]/10 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#1f6feb]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] rounded-lg flex items-center justify-center text-white text-xl mb-4">
+                      ➕
+                    </div>
+                    <h3 className="text-lg font-semibold text-github-fg-default mb-2">
+                      Create Session
+                    </h3>
+                    <p className="text-github-fg-muted text-sm mb-4">
+                      Set up a new WhatsApp connection and scan QR code
+                    </p>
+                    <div className="flex items-center text-[#1f6feb] text-sm font-medium">
+                      Get Started
+                      <span className="ml-2 group-hover:translate-x-1 transition-transform duration-200">
+                        →
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Send Messages Card */}
+              <Link href="/send" className="group block">
+                <div className="relative bg-github-canvas-subtle border border-github-border-default rounded-lg p-6 hover:shadow-lg hover:shadow-[#238636]/10 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#238636]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-gradient-to-r from-[#238636] to-[#2ea043] rounded-lg flex items-center justify-center text-white text-xl mb-4">
+                      💬
+                    </div>
+                    <h3 className="text-lg font-semibold text-github-fg-default mb-2">
+                      Send Messages
+                    </h3>
+                    <p className="text-github-fg-muted text-sm mb-4">
+                      Send text messages and media files to any contact
+                    </p>
+                    <div className="flex items-center text-[#238636] text-sm font-medium">
+                      Start Messaging
+                      <span className="ml-2 group-hover:translate-x-1 transition-transform duration-200">
+                        →
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Session Status Card */}
+              <Link href="/status" className="group block">
+                <div className="relative bg-github-canvas-subtle border border-github-border-default rounded-lg p-6 hover:shadow-lg hover:shadow-[#8b5cf6]/10 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#8b5cf6]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] rounded-lg flex items-center justify-center text-white text-xl mb-4">
+                      📊
+                    </div>
+                    <h3 className="text-lg font-semibold text-github-fg-default mb-2">
+                      Session Status
+                    </h3>
+                    <p className="text-github-fg-muted text-sm mb-4">
+                      Monitor and manage all your active sessions
+                    </p>
+                    <div className="flex items-center text-[#8b5cf6] text-sm font-medium">
+                      View Status
+                      <span className="ml-2 group-hover:translate-x-1 transition-transform duration-200">
+                        →
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* API Documentation Card */}
+              <a
+                href="http://localhost:3001/api-docs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block"
+              >
+                <div className="relative bg-github-canvas-subtle border border-github-border-default rounded-lg p-6 hover:shadow-lg hover:shadow-[#f85149]/10 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#f85149]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-gradient-to-r from-[#f85149] to-[#ffab40] rounded-lg flex items-center justify-center text-white text-xl mb-4">
+                      📚
+                    </div>
+                    <h3 className="text-lg font-semibold text-github-fg-default mb-2">
+                      API Documentation
+                    </h3>
+                    <p className="text-github-fg-muted text-sm mb-4">
+                      Explore the REST API endpoints and test functionality
+                    </p>
+                    <div className="flex items-center text-[#f85149] text-sm font-medium">
+                      View Docs
+                      <span className="ml-2 group-hover:translate-x-1 transition-transform duration-200">
+                        ↗
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          {/* Active Sessions Sidebar */}
+          <div>
+            <h2 className="text-xl font-semibold text-github-fg-default mb-6 flex items-center gap-2">
+              <span>📱</span>
+              Active Sessions
+            </h2>
+
+            <div className="bg-github-canvas-subtle border border-github-border-default rounded-lg overflow-hidden">
+              {loading ? (
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-github-canvas-default rounded animate-pulse"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-github-canvas-default rounded animate-pulse"></div>
+                          <div className="h-3 bg-github-canvas-default rounded w-2/3 animate-pulse"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : sessions.length === 0 ? (
+                <div className="p-8 text-center">
+                  <div className="text-4xl mb-4 opacity-50">📱</div>
+                  <h3 className="font-medium text-github-fg-default mb-2">
+                    No Sessions Yet
+                  </h3>
+                  <p className="text-sm text-github-fg-muted mb-4">
+                    Create your first session to get started
+                  </p>
+                  <Link
+                    href="/setup"
+                    className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] text-white rounded-lg hover:from-[#1a5feb] hover:to-[#4fa6ff] transition-all duration-200"
+                  >
+                    Create Session
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-github-border-muted">
+                  {sessions.slice(0, 5).map((session) => (
+                    <div
+                      key={session.id}
+                      className="p-4 hover:bg-github-canvas-inset transition-colors duration-200"
+                    >
+                      <ConnectionStatus session={session} compact />
+                      {session.status === "ready" && (
+                        <div className="mt-3 flex gap-2">
+                          <Link
+                            href={`/send?sessionId=${session.id}`}
+                            className="flex-1 px-3 py-1.5 bg-[#238636]/10 text-[#238636] rounded text-xs font-medium hover:bg-[#238636]/20 transition-colors duration-200 text-center"
+                          >
+                            Send Message
+                          </Link>
+                          <Link
+                            href={`/status?sessionId=${session.id}`}
+                            className="flex-1 px-3 py-1.5 bg-[#1f6feb]/10 text-[#1f6feb] rounded text-xs font-medium hover:bg-[#1f6feb]/20 transition-colors duration-200 text-center"
+                          >
+                            Details
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {sessions.length > 5 && (
+                    <div className="p-4 bg-github-canvas-inset">
+                      <Link
+                        href="/status"
+                        className="block text-center text-sm text-[#1f6feb] hover:text-[#58a6ff] transition-colors duration-200"
+                      >
+                        View all {sessions.length} sessions →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        sessions={sessions}
+      />
     </div>
   );
 }

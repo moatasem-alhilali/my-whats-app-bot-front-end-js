@@ -2,6 +2,9 @@
 
 import ConnectionStatus from "@/components/ConnectionStatus";
 import MessageForm from "@/components/MessageForm";
+import CommandPalette from "@/components/ui/CommandPalette";
+import { StatsSkeleton } from "@/components/ui/LoadingSkeleton";
+import StatCard from "@/components/ui/StatCard";
 import { whatsappApi, WhatsAppSession } from "@/lib/api";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -21,6 +24,8 @@ export default function SendPage() {
       message: string;
     }>
   >([]);
+  const [messagesSent, setMessagesSent] = useState(0);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -38,6 +43,19 @@ export default function SendPage() {
       }
     }
   }, [sessionIdFromUrl, sessions]);
+
+  // Global keyboard shortcut for command palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const loadSessions = async () => {
     try {
@@ -81,6 +99,7 @@ export default function SendPage() {
       message: `Message sent successfully! ID: ${messageId}`,
     };
     setMessageHistory((prev) => [newEntry, ...prev.slice(0, 9)]); // Keep last 10 entries
+    setMessagesSent((prev) => prev + 1);
   };
 
   const getReadySessions = () => {
@@ -88,6 +107,10 @@ export default function SendPage() {
   };
 
   const readySessions = getReadySessions();
+  const totalSessions = sessions.length;
+  const connectingSessions = sessions.filter(
+    (s) => s.status === "qr" || s.status === "initializing"
+  ).length;
 
   return (
     <div className="min-h-screen bg-github-canvas">
@@ -105,6 +128,15 @@ export default function SendPage() {
             </p>
           </div>
           <div className="mt-4 flex space-x-3 md:mt-0 md:ml-4">
+            <button
+              onClick={() => setCommandPaletteOpen(true)}
+              className="inline-flex items-center px-4 py-2 border border-github-border-default rounded-md shadow-sm text-sm font-medium text-github-fg-muted bg-github-canvas-subtle hover:bg-github-canvas-inset focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1f6feb] transition-all duration-200 gap-2"
+            >
+              <span>🔍</span>
+              <kbd className="px-2 py-1 bg-github-canvas-default border border-github-border-muted rounded text-xs">
+                ⌘K
+              </kbd>
+            </button>
             <button
               onClick={loadSessions}
               disabled={loading}
@@ -128,9 +160,51 @@ export default function SendPage() {
           </div>
         </div>
 
+        {/* Stats Cards */}
+        <div className="mb-8">
+          {loading ? (
+            <StatsSkeleton />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatCard
+                title="Total Sessions"
+                value={totalSessions}
+                icon="📱"
+                color="blue"
+                change={totalSessions > 0 ? 5 : undefined}
+                changeLabel="Available sessions"
+              />
+              <StatCard
+                title="Ready to Send"
+                value={readySessions.length}
+                icon="✅"
+                color="green"
+                change={readySessions.length > 0 ? 12 : undefined}
+                changeLabel="Connected sessions"
+              />
+              <StatCard
+                title="Messages Sent"
+                value={messagesSent}
+                icon="📤"
+                color="purple"
+                change={messagesSent > 0 ? 25 : undefined}
+                changeLabel="This session"
+              />
+              <StatCard
+                title="Connecting"
+                value={connectingSessions}
+                icon="⏳"
+                color="yellow"
+                change={connectingSessions > 0 ? -8 : undefined}
+                changeLabel="Pending connections"
+              />
+            </div>
+          )}
+        </div>
+
         {error && (
-          <div className="mb-6 p-4 bg-[#161b22] border border-[#ff6b6b]/20 rounded-lg backdrop-blur-sm">
-            <p className="text-sm text-[#ff6b6b] flex items-center gap-2">
+          <div className="mb-6 p-4 bg-[#da3633]/10 border border-[#da3633]/20 rounded-lg backdrop-blur-sm">
+            <p className="text-sm text-[#da3633] flex items-center gap-2">
               <span className="text-lg">❌</span>
               {error}
             </p>
@@ -306,6 +380,13 @@ export default function SendPage() {
           </div>
         )}
       </div>
+
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        sessions={readySessions}
+      />
     </div>
   );
 }

@@ -3,192 +3,233 @@
 import { WhatsAppSession } from "@/lib/api";
 
 interface ConnectionStatusProps {
-  session?: WhatsAppSession | null;
-  loading?: boolean;
+  session: WhatsAppSession;
+  compact?: boolean;
 }
 
 export default function ConnectionStatus({
   session,
-  loading,
+  compact = false,
 }: ConnectionStatusProps) {
-  const getStatusColor = (status: WhatsAppSession["status"]) => {
+  const getStatusConfig = (status: WhatsAppSession["status"]) => {
     switch (status) {
       case "ready":
-        return "status-ready text-white";
+        return {
+          color: "text-[#238636]",
+          bgColor: "bg-[#238636]/10",
+          borderColor: "border-[#238636]/20",
+          icon: "✅",
+          label: "Ready",
+          description: "Connected and ready to send messages",
+          pulse: false,
+        };
       case "authenticated":
-        return "status-connecting text-white";
+        return {
+          color: "text-[#1f6feb]",
+          bgColor: "bg-[#1f6feb]/10",
+          borderColor: "border-[#1f6feb]/20",
+          icon: "🔐",
+          label: "Authenticated",
+          description: "Authentication successful, finalizing connection",
+          pulse: true,
+        };
       case "qr":
-        return "status-connecting text-white";
+        return {
+          color: "text-[#f85149]",
+          bgColor: "bg-[#f85149]/10",
+          borderColor: "border-[#f85149]/20",
+          icon: "📱",
+          label: "QR Code",
+          description: "Scan QR code with your WhatsApp app",
+          pulse: true,
+        };
       case "initializing":
-        return "bg-gray-500/20 text-gray-300 border border-gray-500/30";
+        return {
+          color: "text-github-fg-muted",
+          bgColor: "bg-github-fg-muted/10",
+          borderColor: "border-github-border-muted",
+          icon: "⏳",
+          label: "Initializing",
+          description: "Setting up session...",
+          pulse: true,
+        };
       case "disconnected":
-        return "status-disconnected text-white";
+        return {
+          color: "text-[#da3633]",
+          bgColor: "bg-[#da3633]/10",
+          borderColor: "border-[#da3633]/20",
+          icon: "❌",
+          label: "Disconnected",
+          description: "Session has been disconnected",
+          pulse: false,
+        };
       default:
-        return "bg-gray-500/20 text-gray-300 border border-gray-500/30";
+        return {
+          color: "text-github-fg-muted",
+          bgColor: "bg-github-fg-muted/10",
+          borderColor: "border-github-border-muted",
+          icon: "❓",
+          label: "Unknown",
+          description: "Status unknown",
+          pulse: false,
+        };
     }
   };
 
-  const getStatusIcon = (status: WhatsAppSession["status"]) => {
-    switch (status) {
-      case "ready":
-        return "✅";
-      case "authenticated":
-        return "🔐";
-      case "qr":
-        return "📱";
-      case "initializing":
-        return "⏳";
-      case "disconnected":
-        return "❌";
-      default:
-        return "❓";
-    }
-  };
+  const statusConfig = getStatusConfig(session.status);
 
-  const getStatusText = (status: WhatsAppSession["status"]) => {
-    switch (status) {
-      case "ready":
-        return "Connected & Ready";
-      case "authenticated":
-        return "Authenticated";
-      case "qr":
-        return "Waiting for QR Scan";
-      case "initializing":
-        return "Initializing...";
-      case "disconnected":
-        return "Disconnected";
-      default:
-        return "Unknown";
-    }
-  };
-
-  if (loading) {
+  if (compact) {
     return (
-      <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6 card-hover">
-        <h3 className="text-lg font-semibold mb-4 text-white">
-          Connection Status
-        </h3>
-        <div className="text-center py-8">
-          <div className="relative mx-auto mb-4 w-12 h-12">
-            <div className="w-12 h-12 border-4 border-[#21262d] border-t-blue-500 rounded-full animate-spin"></div>
+      <div className="flex items-center gap-3">
+        <div
+          className={`relative w-8 h-8 ${statusConfig.bgColor} ${statusConfig.borderColor} border rounded-lg flex items-center justify-center`}
+        >
+          <span className="text-sm">{statusConfig.icon}</span>
+          {statusConfig.pulse && (
             <div
-              className="absolute inset-0 w-12 h-12 border-4 border-transparent border-t-green-500 rounded-full animate-spin"
-              style={{
-                animationDirection: "reverse",
-                animationDuration: "1.5s",
-              }}
+              className={`absolute inset-0 ${statusConfig.bgColor} rounded-lg animate-pulse opacity-50`}
             ></div>
-          </div>
-          <p className="text-gray-400">Loading status...</p>
+          )}
         </div>
-      </div>
-    );
-  }
 
-  if (!session) {
-    return (
-      <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6 card-hover">
-        <h3 className="text-lg font-semibold mb-4 text-white">
-          Connection Status
-        </h3>
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-gray-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <div className="text-4xl">📱</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className="font-medium text-github-fg-default truncate text-sm">
+              {session.id}
+            </h4>
+            <span
+              className={`px-2 py-0.5 ${statusConfig.bgColor} ${statusConfig.color} ${statusConfig.borderColor} border rounded-full text-xs font-medium`}
+            >
+              {statusConfig.label}
+            </span>
           </div>
-          <p className="text-gray-400 font-medium">No session found</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Create a session to get started
-          </p>
+
+          {session.clientInfo?.pushname && (
+            <p className="text-xs text-github-fg-muted truncate">
+              {session.clientInfo.pushname}
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6 card-hover hover-lift">
-      <h3 className="text-lg font-semibold mb-4 text-white">
-        Connection Status
-      </h3>
-
-      <div className="space-y-6">
-        {/* Status Indicator */}
-        <div className="flex items-center space-x-4">
-          <div className="text-3xl">{getStatusIcon(session.status)}</div>
-          <div className="flex-1">
+    <div
+      className={`p-6 ${statusConfig.bgColor} ${statusConfig.borderColor} border rounded-lg backdrop-blur-sm`}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-4">
+        <div
+          className={`relative w-12 h-12 ${statusConfig.bgColor} ${statusConfig.borderColor} border rounded-lg flex items-center justify-center`}
+        >
+          <span className="text-xl">{statusConfig.icon}</span>
+          {statusConfig.pulse && (
             <div
-              className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(
-                session.status
-              )}`}
+              className={`absolute inset-0 ${statusConfig.bgColor} rounded-lg animate-pulse opacity-50`}
+            ></div>
+          )}
+        </div>
+
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className="font-semibold text-github-fg-default">
+              Session Status
+            </h3>
+            <span
+              className={`px-3 py-1 ${statusConfig.bgColor} ${statusConfig.color} ${statusConfig.borderColor} border rounded-full text-sm font-medium`}
             >
-              {getStatusText(session.status)}
-            </div>
+              {statusConfig.label}
+            </span>
+          </div>
+          <p className="text-sm text-github-fg-muted">
+            {statusConfig.description}
+          </p>
+        </div>
+      </div>
+
+      {/* Session Details */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-github-canvas-default/50 rounded-lg p-3">
+            <dt className="text-xs font-medium text-github-fg-muted uppercase tracking-wide mb-1">
+              Session ID
+            </dt>
+            <dd className="text-sm font-mono text-github-fg-default break-all">
+              {session.id}
+            </dd>
+          </div>
+
+          <div className="bg-github-canvas-default/50 rounded-lg p-3">
+            <dt className="text-xs font-medium text-github-fg-muted uppercase tracking-wide mb-1">
+              Status
+            </dt>
+            <dd className={`text-sm font-medium ${statusConfig.color}`}>
+              {statusConfig.label}
+            </dd>
           </div>
         </div>
 
-        {/* Session Info */}
-        <div className="bg-[#0d1117] border border-[#21262d] rounded-lg p-4">
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <span className="text-sm font-medium text-gray-400">
-                Session ID:
-              </span>
-              <div className="text-sm text-white font-mono bg-[#21262d] px-3 py-2 rounded-lg border border-[#30363d] mt-1">
-                {session.id}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Client Info */}
         {session.clientInfo && (
-          <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-lg p-4">
-            <h4 className="text-sm font-semibold text-green-400 mb-3 flex items-center">
-              <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+          <div className="border-t border-github-border-muted pt-4">
+            <h4 className="text-sm font-medium text-github-fg-default mb-3 flex items-center gap-2">
+              <span>📱</span>
               Device Information
             </h4>
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <span className="text-sm font-medium text-green-300">
-                  Display Name:
-                </span>
-                <div className="text-sm text-white mt-1 font-medium">
-                  {session.clientInfo.pushname}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {session.clientInfo.pushname && (
+                <div className="bg-github-canvas-default/50 rounded-lg p-3">
+                  <dt className="text-xs font-medium text-github-fg-muted uppercase tracking-wide mb-1">
+                    Display Name
+                  </dt>
+                  <dd className="text-sm text-github-fg-default">
+                    {session.clientInfo.pushname}
+                  </dd>
                 </div>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-green-300">
-                  WhatsApp ID:
-                </span>
-                <div className="text-sm text-gray-300 font-mono mt-1 bg-[#21262d] px-2 py-1 rounded border border-[#30363d]">
-                  {session.clientInfo.wid}
+              )}
+
+              {session.clientInfo.wid && (
+                <div className="bg-github-canvas-default/50 rounded-lg p-3">
+                  <dt className="text-xs font-medium text-github-fg-muted uppercase tracking-wide mb-1">
+                    WhatsApp ID
+                  </dt>
+                  <dd className="text-sm font-mono text-github-fg-default break-all">
+                    {session.clientInfo.wid}
+                  </dd>
                 </div>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-green-300">
-                  Platform:
-                </span>
-                <div className="text-sm text-white mt-1">
-                  {session.clientInfo.platform}
+              )}
+
+              {session.clientInfo.platform && (
+                <div className="bg-github-canvas-default/50 rounded-lg p-3">
+                  <dt className="text-xs font-medium text-github-fg-muted uppercase tracking-wide mb-1">
+                    Platform
+                  </dt>
+                  <dd className="text-sm text-github-fg-default">
+                    {session.clientInfo.platform}
+                  </dd>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Connection Health */}
-        <div className="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-[#21262d]">
-          <span>Last updated: {new Date().toLocaleTimeString()}</span>
-          <div className="flex items-center space-x-1">
-            <div
-              className={`w-2 h-2 rounded-full ${
-                session.status === "ready"
-                  ? "bg-green-500 animate-pulse"
-                  : session.status === "disconnected"
-                  ? "bg-red-500"
-                  : "bg-yellow-500 animate-pulse"
-              }`}
-            ></div>
-            <span className="capitalize">{session.status}</span>
+        {/* Health Indicator */}
+        <div className="border-t border-github-border-muted pt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-github-fg-default">
+                Health Status:
+              </span>
+              <span
+                className={`px-2 py-1 ${statusConfig.bgColor} ${statusConfig.color} rounded-full text-xs font-medium`}
+              >
+                {session.status === "ready" ? "Healthy" : "Issues Detected"}
+              </span>
+            </div>
+            <div className="text-xs text-github-fg-muted">
+              Last updated: {new Date().toLocaleTimeString()}
+            </div>
           </div>
         </div>
       </div>
