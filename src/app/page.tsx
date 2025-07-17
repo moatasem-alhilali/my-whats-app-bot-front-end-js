@@ -10,149 +10,7 @@ import { whatsappApi, WhatsAppSession } from "@/lib/api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-// Modern card component inspired by reactbits.dev
-function StatsCard({
-  title,
-  value,
-  icon,
-  color,
-  trend,
-  description,
-}: {
-  title: string;
-  value: number;
-  icon: string;
-  color: string;
-  trend?: { direction: "up" | "down" | "stable"; percentage: number };
-  description: string;
-}) {
-  const colorClasses = {
-    blue: "from-blue-500/20 to-cyan-500/20 border-blue-500/30",
-    green: "from-green-500/20 to-emerald-500/20 border-green-500/30",
-    yellow: "from-yellow-500/20 to-orange-500/20 border-yellow-500/30",
-    red: "from-red-500/20 to-pink-500/20 border-red-500/30",
-  };
-
-  return (
-    <div
-      className={`card-hover bg-gradient-to-br ${
-        colorClasses[color as keyof typeof colorClasses]
-      } rounded-xl p-6 hover-lift`}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="text-2xl">{icon}</div>
-            <h3 className="text-sm font-medium text-gray-400">{title}</h3>
-          </div>
-          <div className="flex items-baseline space-x-2">
-            <p className="text-3xl font-bold text-white">{value}</p>
-            {trend && (
-              <span
-                className={`text-sm font-medium ${
-                  trend.direction === "up"
-                    ? "text-green-400"
-                    : trend.direction === "down"
-                    ? "text-red-400"
-                    : "text-gray-400"
-                }`}
-              >
-                {trend.direction === "up"
-                  ? "↗"
-                  : trend.direction === "down"
-                  ? "↘"
-                  : "→"}{" "}
-                {trend.percentage}%
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 mt-2">{description}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Action card component
-function ActionCard({
-  title,
-  description,
-  icon,
-  href,
-  gradient,
-  badge,
-}: {
-  title: string;
-  description: string;
-  icon: string;
-  href: string;
-  gradient: string;
-  badge?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group relative overflow-hidden bg-[#161b22] border border-[#21262d] rounded-xl p-6 hover-lift card-hover transition-all duration-300"
-    >
-      <div
-        className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}
-      ></div>
-      <div className="relative z-10">
-        <div className="flex items-start justify-between mb-4">
-          <div
-            className={`w-12 h-12 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-xl`}
-          >
-            {icon}
-          </div>
-          {badge && (
-            <span className="px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">
-              {badge}
-            </span>
-          )}
-        </div>
-        <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">
-          {title}
-        </h3>
-        <p className="text-sm text-gray-400 leading-relaxed">{description}</p>
-        <div className="mt-4 flex items-center text-blue-400 text-sm font-medium">
-          Get started
-          <svg
-            className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-// Activity indicator component
-function ActivityIndicator({ sessions }: { sessions: WhatsAppSession[] }) {
-  const recentActivity =
-    sessions.filter((s) => s.status === "ready").length > 0;
-
-  return (
-    <div className="flex items-center space-x-2">
-      <div
-        className={`w-2 h-2 rounded-full ${
-          recentActivity ? "bg-green-500 animate-pulse" : "bg-gray-500"
-        }`}
-      ></div>
-      <span className="text-xs text-gray-400">
-        {recentActivity ? "Active sessions detected" : "No active sessions"}
-      </span>
-    </div>
-  );
-}
+// Remove unused components StatsCard, ActionCard, and ActivityIndicator
 
 export default function Dashboard() {
   const [sessions, setSessions] = useState<WhatsAppSession[]>([]);
@@ -224,7 +82,7 @@ export default function Dashboard() {
   };
 
   const stats = getSessionStats();
-  const readySessions = sessions.filter((s) => s.status === "ready");
+  // Remove unused readySessions variable
 
   return (
     <div className="min-h-screen bg-github-canvas">
