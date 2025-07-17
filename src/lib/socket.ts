@@ -54,8 +54,24 @@ export interface ClientToServerEvents {
     data: { sessionId: string; to: string; message: string },
     callback: (response: SocketResponse<{ messageId: string }>) => void
   ) => void;
+  "message:read": (
+    data: { sessionId: string; messageId: string },
+    callback: (response: SocketResponse) => void
+  ) => void;
+  "typing:indicator": (
+    data: { sessionId: string; to: string },
+    callback: (response: SocketResponse) => void
+  ) => void;
+  "presence:subscribe": (
+    data: { sessionId: string; contactId: string },
+    callback: (response: SocketResponse) => void
+  ) => void;
   "sessions:list": (
     callback: (response: SocketResponse<WhatsAppSessionSocket[]>) => void
+  ) => void;
+  join: (
+    data: { sessionId: string },
+    callback: (response: SocketResponse) => void
   ) => void;
 }
 
@@ -85,6 +101,27 @@ export interface ServerToClientEvents {
     sessionId: string;
     messageId: string;
     ack: number;
+    status: string;
+  }) => void;
+  "typing:status": (data: {
+    sessionId: string;
+    from: string;
+    status: string;
+  }) => void;
+  "message:revoked": (data: {
+    sessionId: string;
+    messageId: string;
+    from: string;
+  }) => void;
+  "presence:update": (data: {
+    sessionId: string;
+    id: string;
+    presence: {
+      id: string;
+      lastSeen: number | null;
+      isOnline: boolean;
+      isUser: boolean;
+    };
   }) => void;
   error: (data: { message: string; code?: string }) => void;
 }
@@ -173,14 +210,40 @@ class SocketService {
         "✓ Message acknowledgment:",
         data.sessionId,
         data.messageId,
-        data.ack
+        data.ack,
+        data.status
       );
       this.emit("message:ack", data);
     });
 
+    this.socket.on("typing:status", (data) => {
+      console.log("👨‍💻 Typing status:", data.sessionId, data.from, data.status);
+      this.emit("typing:status", data);
+    });
+
+    this.socket.on("message:revoked", (data) => {
+      console.log(
+        "🗑️ Message revoked:",
+        data.sessionId,
+        data.messageId,
+        data.from
+      );
+      this.emit("message:revoked", data);
+    });
+
+    this.socket.on("presence:update", (data) => {
+      console.log(
+        "👤 Presence update:",
+        data.sessionId,
+        data.id,
+        data.presence.isOnline ? "online" : "offline"
+      );
+      this.emit("presence:update", data);
+    });
+
     this.socket.on("error", (data) => {
-      console.error("🚨 Socket error:", data.message);
-      this.emit("socket:error", data);
+      console.error("❌ Error:", data.message);
+      this.emit("error", data);
     });
   }
 

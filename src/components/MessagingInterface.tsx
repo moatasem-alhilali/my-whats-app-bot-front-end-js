@@ -12,12 +12,16 @@ interface ChatMessage {
   type: "incoming" | "outgoing";
   status?: "sent" | "delivered" | "read";
   isGroupMsg?: boolean;
+  revoked?: boolean;
 }
 
 interface Contact {
   number: string;
   name?: string;
   lastSeen?: number;
+  typing?: boolean;
+  typingStatus?: string;
+  isOnline?: boolean;
 }
 
 export default function MessagingInterface() {
@@ -28,6 +32,10 @@ export default function MessagingInterface() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -58,6 +66,7 @@ export default function MessagingInterface() {
       timestamp: msg.timestamp,
       type: "incoming" as const,
       isGroupMsg: msg.isGroupMsg,
+      revoked: msg.revoked,
     }));
 
     setChatMessages((prev) => {
@@ -66,6 +75,20 @@ export default function MessagingInterface() {
         (m) => !existingIds.has(m.id)
       );
       console.log(`🆕 Found ${newMessages.length} new messages`);
+
+      // Mark new messages as read if they are from the selected contact
+      if (selectedSession && selectedContact) {
+        newMessages.forEach((msg) => {
+          if (msg.from === selectedContact) {
+            try {
+              actions.markMessageAsRead(selectedSession, msg.id);
+            } catch (error) {
+              console.error("Error marking message as read:", error);
+            }
+          }
+        });
+      }
+
       return [...prev, ...newMessages];
     });
 
@@ -96,7 +119,7 @@ export default function MessagingInterface() {
         (a, b) => (b.lastSeen || 0) - (a.lastSeen || 0)
       );
     });
-  }, [state.messages]);
+  }, [state.messages, selectedContact, selectedSession]);
 
   // Update message status from acknowledgments
   useEffect(() => {
@@ -108,6 +131,119 @@ export default function MessagingInterface() {
       );
     });
   }, [state.messageAcks]);
+
+  // Update typing status
+  useEffect(() => {
+    if (state.typingStatus && state.typingStatus.length > 0) {
+      setContacts((prev) => {
+        const updatedContacts = [...prev];
+        state.typingStatus.forEach((status) => {
+          const contactIndex = updatedContacts.findIndex(
+            (c) => c.number === status.from
+          );
+          if (contactIndex !== -1) {
+            updatedContacts[contactIndex] = {
+              ...updatedContacts[contactIndex],
+              typing: true,
+              typingStatus: status.status,
+            };
+          }
+        });
+        return updatedContacts;
+      });
+    } else {
+      // Clear typing status if there are no active typing indicators
+      setContacts((prev) =>
+        prev.map((contact) => ({
+          ...contact,
+          typing: false,
+          typingStatus: undefined,
+        }))
+      );
+    }
+  }, [state.typingStatus]);
+
+  // Update presence information
+  useEffect(() => {
+    if (state.presenceUpdates && state.presenceUpdates.length > 0) {
+      setContacts((prev) => {
+        const updatedContacts = [...prev];
+
+        state.presenceUpdates.forEach((presence) => {
+          // Extract the number from the ID (format: number@c.us)
+          const number = presence.id;
+
+          const contactIndex = updatedContacts.findIndex(
+            (c) => c.number === number
+          );
+
+          if (contactIndex !== -1) {
+            updatedContacts[contactIndex] = {
+              ...updatedContacts[contactIndex],
+              isOnline: presence.isOnline,
+              lastSeen:
+                presence.lastSeen || updatedContacts[contactIndex].lastSeen,
+            };
+          }
+        });
+
+        return updatedContacts;
+      });
+    }
+  }, [state.presenceUpdates]);
+
+  // Subscribe to presence updates when a contact is selected
+  useEffect(() => {
+    if (selectedContact && selectedSession) {
+      try {
+        actions.subscribeToPresence(selectedSession, selectedContact);
+      } catch (error) {
+        console.error("Error subscribing to presence:", error);
+      }
+    }
+  }, [selectedContact, selectedSession, actions]);
+
+  // Update revoked messages
+  useEffect(() => {
+    if (state.revokedMessages && state.revokedMessages.length > 0) {
+      setChatMessages((prev) => {
+        return prev.map((msg) => {
+          const isRevoked = state.revokedMessages.some(
+            (revoked) => revoked.messageId === msg.id
+          );
+          return isRevoked ? { ...msg, revoked: true } : msg;
+        });
+      });
+    }
+  }, [state.revokedMessages]);
+
+  // Handle typing indicator
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessageText(e.target.value);
+
+    // Send typing indicator
+    if (selectedContact && selectedSession && !isTyping) {
+      setIsTyping(true);
+
+      try {
+        actions.sendTypingIndicator(selectedSession, selectedContact);
+      } catch (error) {
+        console.error("Error sending typing indicator:", error);
+      }
+
+      // Clear previous timeout if exists
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
+
+      // Set typing to false after 3 seconds
+      const timeout = setTimeout(() => {
+        setIsTyping(false);
+      }, 3000);
+
+      setTypingTimeout(timeout);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedContact || !selectedSession) return;
@@ -143,6 +279,12 @@ export default function MessagingInterface() {
 
         setChatMessages((prev) => [...prev, outgoingMessage]);
         setMessageText("");
+
+        // Reset typing state
+        setIsTyping(false);
+        if (typingTimeout) {
+          clearTimeout(typingTimeout);
+        }
       } else {
         const errorMsg = response?.error || "Unknown error";
         console.error("Failed to send message:", errorMsg);
@@ -174,6 +316,34 @@ export default function MessagingInterface() {
     });
   };
 
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+
+    // If today, show time
+    if (date.toDateString() === now.toDateString()) {
+      return formatTime(timestamp);
+    }
+
+    // If yesterday, show "Yesterday"
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    }
+
+    // If this week, show day name
+    const daysDiff = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (daysDiff < 7) {
+      return date.toLocaleDateString(undefined, { weekday: "long" });
+    }
+
+    // Otherwise, show date
+    return date.toLocaleDateString();
+  };
+
   const formatNumber = (number: string) => {
     return number.includes("@g.us")
       ? number.split("@")[0] + " (Group)"
@@ -192,13 +362,13 @@ export default function MessagingInterface() {
   const getStatusIcon = (status?: string) => {
     switch (status) {
       case "sent":
-        return "✓";
+        return <span className="text-gray-400">✓</span>;
       case "delivered":
-        return "✓✓";
+        return <span className="text-gray-400">✓✓</span>;
       case "read":
-        return "✓✓";
+        return <span className="text-blue-500">✓✓</span>;
       default:
-        return "⏳";
+        return <span className="text-gray-400">⏳</span>;
     }
   };
 
@@ -281,15 +451,29 @@ export default function MessagingInterface() {
                     : ""
                 }`}
               >
-                <div className="font-medium text-gray-900">
-                  {contact.name || formatNumber(contact.number)}
+                <div className="flex justify-between items-start">
+                  <div className="font-medium text-gray-900">
+                    {contact.name || formatNumber(contact.number)}
+                  </div>
+                  {contact.isOnline && (
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  )}
                 </div>
                 <div className="text-sm text-gray-500">
                   {formatNumber(contact.number)}
                 </div>
-                {contact.lastSeen && (
+                {contact.typing && (
+                  <div className="text-xs text-green-500 font-medium animate-pulse">
+                    {contact.typingStatus === "recording"
+                      ? "Recording..."
+                      : "Typing..."}
+                  </div>
+                )}
+                {!contact.typing && contact.lastSeen && (
                   <div className="text-xs text-gray-400">
-                    Last: {formatTime(contact.lastSeen)}
+                    {contact.isOnline
+                      ? "Online"
+                      : `Last seen: ${formatDate(contact.lastSeen)}`}
                   </div>
                 )}
               </div>
@@ -318,9 +502,15 @@ export default function MessagingInterface() {
         <div className="p-4 bg-white border-b">
           {selectedContact ? (
             <div>
-              <h2 className="font-medium text-gray-900">
-                {formatNumber(selectedContact)}
-              </h2>
+              <div className="flex items-center">
+                <h2 className="font-medium text-gray-900">
+                  {formatNumber(selectedContact)}
+                </h2>
+                {contacts.find((c) => c.number === selectedContact)
+                  ?.isOnline && (
+                  <span className="ml-2 text-xs text-green-500">online</span>
+                )}
+              </div>
               <p className="text-sm text-gray-500">
                 Session: {selectedSession || "Not selected"}
               </p>
@@ -351,12 +541,18 @@ export default function MessagingInterface() {
                 >
                   <div
                     className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.type === "outgoing"
+                      message.revoked
+                        ? "bg-gray-100 text-gray-500 italic"
+                        : message.type === "outgoing"
                         ? "bg-blue-500 text-white"
                         : "bg-gray-200 text-gray-900"
                     }`}
                   >
-                    <div className="break-words">{message.body}</div>
+                    <div className="break-words">
+                      {message.revoked
+                        ? "This message was deleted"
+                        : message.body}
+                    </div>
                     <div
                       className={`text-xs mt-1 flex items-center justify-between ${
                         message.type === "outgoing"
@@ -365,7 +561,7 @@ export default function MessagingInterface() {
                       }`}
                     >
                       <span>{formatTime(message.timestamp)}</span>
-                      {message.type === "outgoing" && (
+                      {message.type === "outgoing" && !message.revoked && (
                         <span className="ml-2">
                           {getStatusIcon(message.status)}
                         </span>
@@ -389,7 +585,7 @@ export default function MessagingInterface() {
             <div className="flex space-x-2">
               <textarea
                 value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
+                onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
                 placeholder="Type your message..."
                 className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"

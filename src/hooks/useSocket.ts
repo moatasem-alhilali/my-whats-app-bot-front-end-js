@@ -1,3 +1,4 @@
+import { ClientToServerEvents, ServerToClientEvents } from "@/lib/socket";
 import { useCallback, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -31,6 +32,7 @@ export interface IncomingMessage {
   isGroupMsg: boolean;
   author?: string;
   mentionedIds?: string[];
+  revoked?: boolean; // Added revoked property
 }
 
 export interface MessageAck {
@@ -39,13 +41,34 @@ export interface MessageAck {
   timestamp: number;
 }
 
+export interface TypingStatus {
+  from: string;
+  status: string;
+  timestamp: number;
+}
+
+export interface RevokedMessage {
+  messageId: string;
+  from: string;
+  timestamp: number;
+}
+
+export interface PresenceUpdate {
+  id: string;
+  lastSeen: number | null;
+  isOnline: boolean;
+  timestamp: number;
+}
+
 export interface SocketState {
   isConnected: boolean;
-  connectionError?: string;
+  connectionError: string | null;
   sessions: WhatsAppSessionSocket[];
   messages: IncomingMessage[];
   messageAcks: MessageAck[];
-  qrCodes: Map<string, string>;
+  typingStatus: TypingStatus[];
+  revokedMessages: RevokedMessage[];
+  presenceUpdates: PresenceUpdate[];
 }
 
 export interface UseSocketResult {
@@ -65,19 +88,37 @@ export interface UseSocketResult {
     ) => Promise<SocketResponse<WhatsAppSessionSocket>>;
     getSessions: () => Promise<SocketResponse<WhatsAppSessionSocket[]>>;
     joinSession: (sessionId: string) => void;
+    markMessageAsRead: (
+      sessionId: string,
+      messageId: string
+    ) => Promise<SocketResponse>;
+    sendTypingIndicator: (
+      sessionId: string,
+      to: string
+    ) => Promise<SocketResponse>;
+    subscribeToPresence: (
+      sessionId: string,
+      contactId: string
+    ) => Promise<SocketResponse>;
   };
 }
 
 export const useSocket = (): UseSocketResult => {
   const [state, setState] = useState<SocketState>({
     isConnected: false,
+    connectionError: null,
     sessions: [],
     messages: [],
     messageAcks: [],
-    qrCodes: new Map(),
+    typingStatus: [],
+    revokedMessages: [],
+    presenceUpdates: [],
   });
 
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<Socket<
+    ServerToClientEvents,
+    ClientToServerEvents
+  > | null>(null);
   const [joinedSessions, setJoinedSessions] = useState<Set<string>>(new Set());
 
   // Initialize socket connection and event listeners
@@ -95,7 +136,7 @@ export const useSocket = (): UseSocketResult => {
       setState((prev) => ({
         ...prev,
         isConnected: true,
-        connectionError: undefined,
+        connectionError: null,
       }));
     });
 
@@ -117,34 +158,33 @@ export const useSocket = (): UseSocketResult => {
     });
 
     // Set up session event listeners
-    newSocket.on("session:qr", (data: any) => {
-      console.log("📋 QR received:", data.sessionId);
-      setState((prev) => {
-        const newQrCodes = new Map(prev.qrCodes);
-        newQrCodes.set(data.sessionId, data.qrCode);
+    newSocket.on(
+      "session:qr",
+      (data: { sessionId: string; qrCode: string }) => {
+        console.log("📋 QR received:", data.sessionId);
+        setState((prev) => {
+          const updatedSessions = prev.sessions.map((session) =>
+            session.id === data.sessionId
+              ? { ...session, status: "qr" as const, qrCode: data.qrCode }
+              : session
+          );
 
-        const updatedSessions = prev.sessions.map((session) =>
-          session.id === data.sessionId
-            ? { ...session, status: "qr" as const, qrCode: data.qrCode }
-            : session
-        );
+          // Add session if it doesn't exist
+          if (!updatedSessions.find((s) => s.id === data.sessionId)) {
+            updatedSessions.push({
+              id: data.sessionId,
+              status: "qr",
+              qrCode: data.qrCode,
+            });
+          }
 
-        // Add session if it doesn't exist
-        if (!updatedSessions.find((s) => s.id === data.sessionId)) {
-          updatedSessions.push({
-            id: data.sessionId,
-            status: "qr",
-            qrCode: data.qrCode,
-          });
-        }
-
-        return {
-          ...prev,
-          qrCodes: newQrCodes,
-          sessions: updatedSessions,
-        };
-      });
-    });
+          return {
+            ...prev,
+            sessions: updatedSessions,
+          };
+        });
+      }
+    );
 
     newSocket.on("session:authenticated", (data: any) => {
       console.log("✅ Session authenticated:", data.sessionId);
@@ -225,6 +265,82 @@ export const useSocket = (): UseSocketResult => {
             : ack
         ),
       }));
+    });
+
+    newSocket.on("typing:status", (data: any) => {
+      console.log("👨‍💻 Typing status:", data.from, data.status);
+      setState((prev) => {
+        // Remove any existing typing status for this contact and add the new one
+        const filteredStatus = prev.typingStatus.filter(
+          (status) => status.from !== data.from
+        );
+        return {
+          ...prev,
+          typingStatus: [
+            ...filteredStatus,
+            {
+              from: data.from,
+              status: data.status,
+              timestamp: Date.now(),
+            },
+          ],
+        };
+      });
+
+      // Auto-clear typing status after 10 seconds
+      setTimeout(() => {
+        setState((prev) => ({
+          ...prev,
+          typingStatus: prev.typingStatus.filter(
+            (status) =>
+              status.from !== data.from || status.timestamp > Date.now() - 10000
+          ),
+        }));
+      }, 10000);
+    });
+
+    newSocket.on("message:revoked", (data: any) => {
+      console.log("🗑️ Message revoked:", data.messageId, data.from);
+      setState((prev) => ({
+        ...prev,
+        revokedMessages: [
+          ...prev.revokedMessages,
+          {
+            messageId: data.messageId,
+            from: data.from,
+            timestamp: Date.now(),
+          },
+        ],
+        // Mark the message as revoked in the messages array
+        messages: prev.messages.map((msg) =>
+          msg.id === data.messageId ? { ...msg, revoked: true } : msg
+        ),
+      }));
+    });
+
+    newSocket.on("presence:update", (data) => {
+      console.log(
+        "👤 Presence update:",
+        data.id,
+        data.presence.isOnline ? "online" : "offline"
+      );
+      setState((prev) => {
+        // Update or add the presence information
+        const updatedPresence = [
+          ...prev.presenceUpdates.filter((p) => p.id !== data.id),
+          {
+            id: data.id,
+            lastSeen: data.presence.lastSeen,
+            isOnline: data.presence.isOnline,
+            timestamp: Date.now(),
+          },
+        ];
+
+        return {
+          ...prev,
+          presenceUpdates: updatedPresence,
+        };
+      });
     });
 
     setSocket(newSocket);
@@ -459,6 +575,72 @@ export const useSocket = (): UseSocketResult => {
     });
   }, [socket, state.isConnected]);
 
+  // Add the markMessageAsRead function
+  const markMessageAsRead = useCallback(
+    (sessionId: string, messageId: string): Promise<SocketResponse> => {
+      if (!socket) return Promise.reject("Socket not connected");
+
+      return new Promise<SocketResponse>((resolve, reject) => {
+        socket.emit(
+          "message:read",
+          { sessionId, messageId },
+          (response: SocketResponse) => {
+            if (response.success) {
+              resolve(response);
+            } else {
+              reject(response.error);
+            }
+          }
+        );
+      });
+    },
+    [socket]
+  );
+
+  // Send typing indicator
+  const sendTypingIndicator = useCallback(
+    (sessionId: string, to: string): Promise<SocketResponse> => {
+      if (!socket) return Promise.reject("Socket not connected");
+
+      return new Promise<SocketResponse>((resolve, reject) => {
+        socket.emit(
+          "typing:indicator",
+          { sessionId, to },
+          (response: SocketResponse) => {
+            if (response.success) {
+              resolve(response);
+            } else {
+              reject(response.error);
+            }
+          }
+        );
+      });
+    },
+    [socket]
+  );
+
+  // Subscribe to presence updates
+  const subscribeToPresence = useCallback(
+    (sessionId: string, contactId: string): Promise<SocketResponse> => {
+      if (!socket) return Promise.reject("Socket not connected");
+
+      return new Promise<SocketResponse>((resolve, reject) => {
+        socket.emit(
+          "presence:subscribe",
+          { sessionId, contactId },
+          (response: SocketResponse) => {
+            if (response.success) {
+              resolve(response);
+            } else {
+              reject(response.error);
+            }
+          }
+        );
+      });
+    },
+    [socket]
+  );
+
   return {
     state,
     actions: {
@@ -468,6 +650,9 @@ export const useSocket = (): UseSocketResult => {
       getSessionStatus,
       getSessions,
       joinSession,
+      markMessageAsRead,
+      sendTypingIndicator,
+      subscribeToPresence,
     },
   };
 };
