@@ -1,6 +1,7 @@
 "use client";
 
-import { WhatsAppSession } from "@/lib/api";
+import { UserGuidance, whatsappApi, WhatsAppSession } from "@/lib/api";
+import { useEffect, useState } from "react";
 
 interface ConnectionStatusProps {
   session: WhatsAppSession;
@@ -11,6 +12,32 @@ export default function ConnectionStatus({
   session,
   compact = false,
 }: ConnectionStatusProps) {
+  const [guidance, setGuidance] = useState<UserGuidance | null>(null);
+  const [loadingGuidance, setLoadingGuidance] = useState(false);
+
+  // Load guidance for ready sessions
+  useEffect(() => {
+    if (session.status === "ready") {
+      loadGuidance();
+    }
+  }, [session.id, session.status]);
+
+  const loadGuidance = async () => {
+    if (loadingGuidance) return;
+
+    setLoadingGuidance(true);
+    try {
+      const response = await whatsappApi.getSessionGuidance(session.id);
+      if (response.success && response.data) {
+        setGuidance(response.data);
+      }
+    } catch (error) {
+      console.debug("Could not load session guidance:", error);
+    } finally {
+      setLoadingGuidance(false);
+    }
+  };
+
   const getStatusConfig = (status: WhatsAppSession["status"]) => {
     switch (status) {
       case "ready":
@@ -214,6 +241,80 @@ export default function ConnectionStatus({
           </div>
         )}
 
+        {/* Protection Guidance */}
+        {guidance && session.status === "ready" && (
+          <div className="border-t border-github-border-muted pt-4">
+            <div
+              className={`p-4 rounded-lg border ${
+                guidance.level === "critical"
+                  ? "bg-[#da3633]/10 border-[#da3633]/20"
+                  : guidance.level === "danger"
+                  ? "bg-[#f85149]/10 border-[#f85149]/20"
+                  : guidance.level === "warning"
+                  ? "bg-[#fb8500]/10 border-[#fb8500]/20"
+                  : "bg-[#238636]/10 border-[#238636]/20"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-lg">
+                  {guidance.level === "critical"
+                    ? "🚨"
+                    : guidance.level === "danger"
+                    ? "⚠️"
+                    : guidance.level === "warning"
+                    ? "⚠️"
+                    : "✅"}
+                </span>
+                <div className="flex-1">
+                  <h4
+                    className={`font-semibold text-sm mb-1 ${
+                      guidance.level === "critical"
+                        ? "text-[#da3633]"
+                        : guidance.level === "danger"
+                        ? "text-[#f85149]"
+                        : guidance.level === "warning"
+                        ? "text-[#fb8500]"
+                        : "text-[#238636]"
+                    }`}
+                  >
+                    {guidance.title}
+                  </h4>
+                  <p className="text-sm text-github-fg-default mb-2">
+                    {guidance.message}
+                  </p>
+                  {guidance.nextAction && (
+                    <p className="text-xs text-github-fg-muted font-medium">
+                      Next: {guidance.nextAction}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {!compact && guidance.recommendations.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-github-border-muted">
+                  <p className="text-xs font-medium text-github-fg-muted mb-2">
+                    Recommendations:
+                  </p>
+                  <ul className="text-xs text-github-fg-default space-y-1">
+                    {guidance.recommendations.slice(0, 3).map((rec, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="text-[#238636] mt-0.5">•</span>
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {guidance.recommendations.length > 3 && (
+                    <p className="text-xs text-github-fg-muted mt-1">
+                      +{guidance.recommendations.length - 3} more
+                      recommendations
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Health Indicator */}
         <div className="border-t border-github-border-muted pt-4">
           <div className="flex items-center justify-between">
@@ -224,7 +325,15 @@ export default function ConnectionStatus({
               <span
                 className={`px-2 py-1 ${statusConfig.bgColor} ${statusConfig.color} rounded-full text-xs font-medium`}
               >
-                {session.status === "ready" ? "Healthy" : "Issues Detected"}
+                {guidance
+                  ? guidance.level === "info"
+                    ? "Healthy"
+                    : guidance.level === "warning"
+                    ? "Caution"
+                    : "Issues Detected"
+                  : session.status === "ready"
+                  ? "Healthy"
+                  : "Issues Detected"}
               </span>
             </div>
             <div className="text-xs text-github-fg-muted">

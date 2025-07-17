@@ -10,7 +10,7 @@ const api = axios.create({
   },
 });
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -28,15 +28,116 @@ export interface WhatsAppSession {
   };
 }
 
+// Anti-ban related interfaces
+export interface AntiBanOptions {
+  personalizeWith?: Record<string, string>;
+  variations?: string[];
+  priority?: "high" | "normal" | "low";
+  useQueue?: boolean;
+  delay?: number;
+  enableHumanBehavior?: boolean;
+}
+
 export interface SendMessageRequest {
   to: string;
   message: string;
+  antiBanOptions?: AntiBanOptions;
 }
 
 export interface SendMediaRequest {
   to: string;
   file: File;
   caption?: string;
+  antiBanOptions?: AntiBanOptions;
+}
+
+export interface MessageStats {
+  messagesSent: number;
+  messagesReceived: number;
+  newContacts: number;
+  lastMessageTime?: string;
+  dailyLimit: number;
+  contactLimit: number;
+  limitResetTime: string;
+}
+
+export interface UserGuidance {
+  level: "info" | "warning" | "danger" | "critical";
+  title: string;
+  message: string;
+  recommendations: string[];
+  canSendMessages: boolean;
+  nextAction?: string;
+}
+
+export interface EnhancedSessionHealth {
+  sessionId: string;
+  status: "healthy" | "warning" | "banned" | "disconnected";
+  lastActivity: string;
+  warningCount: number;
+  banDetected: boolean;
+  lastWarning?: string;
+  lastBan?: string;
+  suspiciousEvents: Array<{
+    type:
+      | "rate_limit"
+      | "auth_failure"
+      | "ban_keyword"
+      | "connection_issue"
+      | "unusual_pattern";
+    severity: "low" | "medium" | "high" | "critical";
+    details: string;
+    timestamp: string;
+  }>;
+  autoStopped: boolean;
+  userGuidance: UserGuidance;
+  riskLevel: "low" | "medium" | "high" | "critical";
+  protectionActive: boolean;
+}
+
+export interface SessionStats {
+  sessionId: string;
+  status: string;
+  messageStats: MessageStats;
+  queueStats: {
+    pending: number;
+    processing: number;
+    completed: number;
+    failed: number;
+  };
+  sessionHealth: EnhancedSessionHealth;
+  antiBanStatus?: {
+    enabled: boolean;
+    warningsDetected: number;
+    lastWarningTime?: string;
+    healthScore: number;
+  };
+}
+
+export interface QueueStatus {
+  isActive: boolean;
+  isPaused: boolean;
+  totalMessages: number;
+  pendingMessages: number;
+  processingMessages: number;
+  completedMessages: number;
+  failedMessages: number;
+  avgProcessingTime: number;
+  estimatedCompletion?: string;
+}
+
+export interface QueueMessage {
+  id: string;
+  sessionId: string;
+  to: string;
+  message: string;
+  priority: "high" | "normal" | "low";
+  status: "pending" | "processing" | "completed" | "failed";
+  attempts: number;
+  createdAt: string;
+  scheduledFor?: string;
+  processedAt?: string;
+  error?: string;
 }
 
 export const whatsappApi = {
@@ -90,6 +191,11 @@ export const whatsappApi = {
       formData.append("caption", data.caption);
     }
 
+    // Add anti-ban options if provided
+    if (data.antiBanOptions) {
+      formData.append("antiBanOptions", JSON.stringify(data.antiBanOptions));
+    }
+
     const response = await api.post(
       `/sessions/${sessionId}/send-media`,
       formData,
@@ -99,6 +205,62 @@ export const whatsappApi = {
         },
       }
     );
+    return response.data;
+  },
+
+  // Anti-ban Statistics and Management
+  async getSessionStats(sessionId: string): Promise<ApiResponse<SessionStats>> {
+    const response = await api.get(`/sessions/${sessionId}/stats`);
+    return response.data;
+  },
+
+  async getSessionGuidance(
+    sessionId: string
+  ): Promise<ApiResponse<UserGuidance>> {
+    const response = await api.get(`/sessions/${sessionId}/guidance`);
+    return response.data;
+  },
+
+  async getQueueStatus(): Promise<ApiResponse<QueueStatus>> {
+    const response = await api.get("/queue/status");
+    return response.data;
+  },
+
+  async pauseQueue(): Promise<ApiResponse> {
+    const response = await api.post("/queue/pause");
+    return response.data;
+  },
+
+  async resumeQueue(): Promise<ApiResponse> {
+    const response = await api.post("/queue/resume");
+    return response.data;
+  },
+
+  async getQueueMessages(
+    page = 1,
+    limit = 20,
+    status?: string
+  ): Promise<
+    ApiResponse<{ messages: QueueMessage[]; total: number; totalPages: number }>
+  > {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    if (status) {
+      params.append("status", status);
+    }
+    const response = await api.get(`/queue/messages?${params}`);
+    return response.data;
+  },
+
+  async retryQueueMessage(messageId: string): Promise<ApiResponse> {
+    const response = await api.post(`/queue/messages/${messageId}/retry`);
+    return response.data;
+  },
+
+  async cancelQueueMessage(messageId: string): Promise<ApiResponse> {
+    const response = await api.delete(`/queue/messages/${messageId}`);
     return response.data;
   },
 

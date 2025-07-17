@@ -3,7 +3,12 @@
 import FileUpload from "@/components/ui/FileUpload";
 import { ToastContainer } from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
-import { SendMessageRequest, whatsappApi } from "@/lib/api";
+import {
+  AntiBanOptions,
+  SendMessageRequest,
+  UserGuidance,
+  whatsappApi,
+} from "@/lib/api";
 import { useState } from "react";
 
 interface MessageFormProps {
@@ -19,6 +24,7 @@ export default function MessageForm({
 }: MessageFormProps) {
   const [activeTab, setActiveTab] = useState<"text" | "media">("text");
   const [loading, setLoading] = useState(false);
+  const [showAntiBanSettings, setShowAntiBanSettings] = useState(false);
   const { toasts, removeToast, success, error: showError } = useToast();
 
   // Text message state
@@ -34,6 +40,44 @@ export default function MessageForm({
     file: null as File | null,
   });
 
+  // Anti-ban settings for both message types
+  const [antiBanOptions, setAntiBanOptions] = useState<AntiBanOptions>({
+    priority: "normal",
+    useQueue: true,
+    enableHumanBehavior: true,
+    personalizeWith: {},
+    variations: [],
+  });
+
+  // Personalization fields state
+  const [personalizationFields, setPersonalizationFields] = useState<
+    Array<{ key: string; value: string }>
+  >([]);
+
+  // Message variations state
+  const [messageVariations, setMessageVariations] = useState<string[]>([""]);
+
+  // Utility function to prepare anti-ban options
+  const prepareAntiBanOptions = (): AntiBanOptions => {
+    // Convert personalization fields to object
+    const personalizeWith = personalizationFields.reduce((acc, field) => {
+      if (field.key && field.value) {
+        acc[field.key] = field.value;
+      }
+      return acc;
+    }, {} as Record<string, string>);
+
+    // Filter out empty variations
+    const variations = messageVariations.filter((v) => v.trim() !== "");
+
+    return {
+      ...antiBanOptions,
+      personalizeWith:
+        Object.keys(personalizeWith).length > 0 ? personalizeWith : undefined,
+      variations: variations.length > 0 ? variations : undefined,
+    };
+  };
+
   const handleTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!textData.to || !textData.message) return;
@@ -41,20 +85,46 @@ export default function MessageForm({
     setLoading(true);
 
     try {
-      const response = await whatsappApi.sendTextMessage(sessionId, textData);
+      const messageWithAntiBan: SendMessageRequest = {
+        ...textData,
+        antiBanOptions: showAntiBanSettings
+          ? prepareAntiBanOptions()
+          : undefined,
+      };
+
+      const response = await whatsappApi.sendTextMessage(
+        sessionId,
+        messageWithAntiBan
+      );
 
       if (response.success && response.data) {
         success(
           "Message sent successfully!",
-          `Message ID: ${response.data.messageId}`
+          `Message ID: ${response.data.messageId}${
+            showAntiBanSettings ? " (with anti-ban protection)" : ""
+          }`
         );
         setTextData({ to: textData.to, message: "" }); // Keep phone number, clear message
         onMessageSent?.(response.data.messageId);
       } else {
-        showError(
-          "Failed to send message",
-          response.error || "Unknown error occurred"
-        );
+        const guidance = (response.data as { userGuidance?: UserGuidance })
+          ?.userGuidance;
+        if (guidance) {
+          const recommendations = guidance.recommendations
+            ?.slice(0, 2)
+            .join(". ");
+          showError(
+            guidance.title,
+            recommendations
+              ? `${guidance.message} ${recommendations}`
+              : guidance.message
+          );
+        } else {
+          showError(
+            "Failed to send message",
+            response.error || "Unknown error occurred"
+          );
+        }
       }
     } catch (err) {
       showError(
@@ -73,24 +143,50 @@ export default function MessageForm({
     setLoading(true);
 
     try {
-      const response = await whatsappApi.sendMediaMessage(sessionId, {
+      const mediaWithAntiBan = {
         to: mediaData.to,
-        file: mediaData.file,
+        file: mediaData.file as File, // Type assertion safe because of form validation above
         caption: mediaData.caption || undefined,
-      });
+        antiBanOptions: showAntiBanSettings
+          ? prepareAntiBanOptions()
+          : undefined,
+      };
+
+      const response = await whatsappApi.sendMediaMessage(
+        sessionId,
+        mediaWithAntiBan
+      );
 
       if (response.success && response.data) {
         success(
           "Media sent successfully!",
-          `Message ID: ${response.data.messageId}`
+          `Message ID: ${response.data.messageId}${
+            showAntiBanSettings ? " (with anti-ban protection)" : ""
+          }`
         );
         setMediaData({ to: mediaData.to, caption: "", file: null }); // Keep phone number, clear rest
         onMessageSent?.(response.data.messageId);
       } else {
-        showError(
-          "Failed to send media",
-          response.error || "Unknown error occurred"
-        );
+        // Check if response contains user guidance
+        const guidance = (response.data as { userGuidance?: UserGuidance })
+          ?.userGuidance;
+
+        if (guidance) {
+          const recommendations = guidance.recommendations
+            ?.slice(0, 2)
+            .join(". ");
+          showError(
+            guidance.title,
+            recommendations
+              ? `${guidance.message} ${recommendations}`
+              : guidance.message
+          );
+        } else {
+          showError(
+            "Failed to send media",
+            response.error || "Unknown error occurred"
+          );
+        }
       }
     } catch (err) {
       showError(
@@ -226,6 +322,265 @@ export default function MessageForm({
                 </div>
               </div>
 
+              {/* Anti-Ban Settings */}
+              <div className="border border-github-border-default rounded-lg bg-github-canvas-subtle">
+                <button
+                  type="button"
+                  onClick={() => setShowAntiBanSettings(!showAntiBanSettings)}
+                  className="w-full p-4 flex items-center justify-between text-left hover:bg-github-canvas-inset transition-colors duration-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#7c3aed] to-[#a855f7] rounded-lg flex items-center justify-center">
+                      <span className="text-white text-sm">🛡️</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-github-fg-default">
+                        Anti-Ban Protection
+                      </h4>
+                      <p className="text-xs text-github-fg-muted">
+                        {showAntiBanSettings
+                          ? "Configure protection settings"
+                          : "Click to enable advanced anti-ban features"}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-github-fg-muted transition-transform duration-200 ${
+                      showAntiBanSettings ? "rotate-180" : ""
+                    }`}
+                  >
+                    ▼
+                  </span>
+                </button>
+
+                {showAntiBanSettings && (
+                  <div className="border-t border-github-border-muted p-4 space-y-4">
+                    {/* Priority and Queue Settings */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-github-fg-default mb-2">
+                          Priority
+                        </label>
+                        <select
+                          value={antiBanOptions.priority}
+                          onChange={(e) =>
+                            setAntiBanOptions((prev) => ({
+                              ...prev,
+                              priority: e.target.value as
+                                | "high"
+                                | "normal"
+                                | "low",
+                            }))
+                          }
+                          className="w-full px-3 py-2 bg-github-canvas-default border border-github-border-default rounded-md focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default"
+                          aria-label="Message priority level"
+                        >
+                          <option value="high">High - Send immediately</option>
+                          <option value="normal">
+                            Normal - Standard queue
+                          </option>
+                          <option value="low">
+                            Low - Send when load is light
+                          </option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="use-queue"
+                            checked={antiBanOptions.useQueue}
+                            onChange={(e) =>
+                              setAntiBanOptions((prev) => ({
+                                ...prev,
+                                useQueue: e.target.checked,
+                              }))
+                            }
+                            className="rounded border-github-border-default"
+                          />
+                          <label
+                            htmlFor="use-queue"
+                            className="text-sm text-github-fg-default"
+                          >
+                            Use message queue
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="human-behavior"
+                            checked={antiBanOptions.enableHumanBehavior}
+                            onChange={(e) =>
+                              setAntiBanOptions((prev) => ({
+                                ...prev,
+                                enableHumanBehavior: e.target.checked,
+                              }))
+                            }
+                            className="rounded border-github-border-default"
+                          />
+                          <label
+                            htmlFor="human-behavior"
+                            className="text-sm text-github-fg-default"
+                          >
+                            Simulate human behavior
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Personalization Fields */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-github-fg-default">
+                          Personalization Fields
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPersonalizationFields((prev) => [
+                              ...prev,
+                              { key: "", value: "" },
+                            ])
+                          }
+                          className="text-xs px-2 py-1 bg-[#1f6feb] text-white rounded hover:bg-[#1a5feb] transition-colors"
+                        >
+                          + Add Field
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {personalizationFields.map((field, index) => (
+                          <div key={index} className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Variable (e.g., name)"
+                              value={field.key}
+                              onChange={(e) => {
+                                const newFields = [...personalizationFields];
+                                newFields[index].key = e.target.value;
+                                setPersonalizationFields(newFields);
+                              }}
+                              className="flex-1 px-3 py-2 bg-github-canvas-default border border-github-border-default rounded-md focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default text-sm"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Value (e.g., John)"
+                              value={field.value}
+                              onChange={(e) => {
+                                const newFields = [...personalizationFields];
+                                newFields[index].value = e.target.value;
+                                setPersonalizationFields(newFields);
+                              }}
+                              className="flex-1 px-3 py-2 bg-github-canvas-default border border-github-border-default rounded-md focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPersonalizationFields((prev) =>
+                                  prev.filter((_, i) => i !== index)
+                                )
+                              }
+                              className="px-2 py-2 text-[#da3633] hover:bg-[#da3633]/10 rounded transition-colors"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        {personalizationFields.length === 0 && (
+                          <p className="text-xs text-github-fg-muted italic">
+                            Use variables like {"{name}"}, {"{company}"} in your
+                            message for personalization
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Message Variations */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-github-fg-default">
+                          Message Variations
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setMessageVariations((prev) => [...prev, ""])
+                          }
+                          className="text-xs px-2 py-1 bg-[#238636] text-white rounded hover:bg-[#1f7a2e] transition-colors"
+                        >
+                          + Add Variation
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {messageVariations.map((variation, index) => (
+                          <div key={index} className="flex gap-2">
+                            <textarea
+                              placeholder={
+                                index === 0
+                                  ? "Main message (will use the message above if empty)"
+                                  : "Alternative message variation"
+                              }
+                              value={variation}
+                              onChange={(e) => {
+                                const newVariations = [...messageVariations];
+                                newVariations[index] = e.target.value;
+                                setMessageVariations(newVariations);
+                              }}
+                              className="flex-1 px-3 py-2 bg-github-canvas-default border border-github-border-default rounded-md focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default text-sm resize-none"
+                              rows={2}
+                            />
+                            {messageVariations.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setMessageVariations((prev) =>
+                                    prev.filter((_, i) => i !== index)
+                                  )
+                                }
+                                className="px-2 py-2 text-[#da3633] hover:bg-[#da3633]/10 rounded transition-colors self-start"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <p className="text-xs text-github-fg-muted">
+                          Multiple variations help avoid repetitive patterns.
+                          One will be selected randomly.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Custom Delay */}
+                    <div>
+                      <label className="block text-sm font-medium text-github-fg-default mb-2">
+                        Custom Delay (seconds)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="3600"
+                        placeholder="Leave empty for automatic delay (30-60s)"
+                        value={antiBanOptions.delay || ""}
+                        onChange={(e) =>
+                          setAntiBanOptions((prev) => ({
+                            ...prev,
+                            delay: e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined,
+                          }))
+                        }
+                        className="w-full px-3 py-2 bg-github-canvas-default border border-github-border-default rounded-md focus:ring-2 focus:ring-[#1f6feb] focus:border-transparent text-github-fg-default"
+                      />
+                      <p className="text-xs text-github-fg-muted mt-1">
+                        Override automatic delay with custom timing. Leave empty
+                        for intelligent delay (recommended).
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={
@@ -244,7 +599,7 @@ export default function MessageForm({
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     <span>📤</span>
-                    Send Text Message
+                    Send Text Message{showAntiBanSettings ? " (Protected)" : ""}
                   </span>
                 )}
               </button>
@@ -312,6 +667,47 @@ export default function MessageForm({
                 />
               </div>
 
+              {/* Anti-Ban Settings - Same as text form */}
+              <div className="border border-github-border-default rounded-lg bg-github-canvas-subtle">
+                <button
+                  type="button"
+                  onClick={() => setShowAntiBanSettings(!showAntiBanSettings)}
+                  className="w-full p-4 flex items-center justify-between text-left hover:bg-github-canvas-inset transition-colors duration-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#7c3aed] to-[#a855f7] rounded-lg flex items-center justify-center">
+                      <span className="text-white text-sm">🛡️</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-github-fg-default">
+                        Anti-Ban Protection
+                      </h4>
+                      <p className="text-xs text-github-fg-muted">
+                        {showAntiBanSettings
+                          ? "Configure protection settings"
+                          : "Click to enable advanced anti-ban features"}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-github-fg-muted transition-transform duration-200 ${
+                      showAntiBanSettings ? "rotate-180" : ""
+                    }`}
+                  >
+                    ▼
+                  </span>
+                </button>
+
+                {showAntiBanSettings && (
+                  <div className="border-t border-github-border-muted p-4 space-y-4">
+                    <p className="text-xs text-github-fg-muted italic">
+                      Anti-ban settings are shared between text and media
+                      messages.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={
@@ -331,6 +727,7 @@ export default function MessageForm({
                   <span className="flex items-center justify-center gap-2">
                     <span>🚀</span>
                     Send Media Message
+                    {showAntiBanSettings ? " (Protected)" : ""}
                   </span>
                 )}
               </button>

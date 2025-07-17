@@ -1,5 +1,6 @@
 "use client";
 
+import AntiBanStats from "@/components/AntiBanStats";
 import ConnectionStatus from "@/components/ConnectionStatus";
 import CommandPalette from "@/components/ui/CommandPalette";
 import { StatsSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -8,151 +9,7 @@ import { ToastContainer } from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 import { whatsappApi, WhatsAppSession } from "@/lib/api";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
-// Modern card component inspired by reactbits.dev
-function StatsCard({
-  title,
-  value,
-  icon,
-  color,
-  trend,
-  description,
-}: {
-  title: string;
-  value: number;
-  icon: string;
-  color: string;
-  trend?: { direction: "up" | "down" | "stable"; percentage: number };
-  description: string;
-}) {
-  const colorClasses = {
-    blue: "from-blue-500/20 to-cyan-500/20 border-blue-500/30",
-    green: "from-green-500/20 to-emerald-500/20 border-green-500/30",
-    yellow: "from-yellow-500/20 to-orange-500/20 border-yellow-500/30",
-    red: "from-red-500/20 to-pink-500/20 border-red-500/30",
-  };
-
-  return (
-    <div
-      className={`card-hover bg-gradient-to-br ${
-        colorClasses[color as keyof typeof colorClasses]
-      } rounded-xl p-6 hover-lift`}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="text-2xl">{icon}</div>
-            <h3 className="text-sm font-medium text-gray-400">{title}</h3>
-          </div>
-          <div className="flex items-baseline space-x-2">
-            <p className="text-3xl font-bold text-white">{value}</p>
-            {trend && (
-              <span
-                className={`text-sm font-medium ${
-                  trend.direction === "up"
-                    ? "text-green-400"
-                    : trend.direction === "down"
-                    ? "text-red-400"
-                    : "text-gray-400"
-                }`}
-              >
-                {trend.direction === "up"
-                  ? "↗"
-                  : trend.direction === "down"
-                  ? "↘"
-                  : "→"}{" "}
-                {trend.percentage}%
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 mt-2">{description}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Action card component
-function ActionCard({
-  title,
-  description,
-  icon,
-  href,
-  gradient,
-  badge,
-}: {
-  title: string;
-  description: string;
-  icon: string;
-  href: string;
-  gradient: string;
-  badge?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group relative overflow-hidden bg-[#161b22] border border-[#21262d] rounded-xl p-6 hover-lift card-hover transition-all duration-300"
-    >
-      <div
-        className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}
-      ></div>
-      <div className="relative z-10">
-        <div className="flex items-start justify-between mb-4">
-          <div
-            className={`w-12 h-12 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-xl`}
-          >
-            {icon}
-          </div>
-          {badge && (
-            <span className="px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">
-              {badge}
-            </span>
-          )}
-        </div>
-        <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">
-          {title}
-        </h3>
-        <p className="text-sm text-gray-400 leading-relaxed">{description}</p>
-        <div className="mt-4 flex items-center text-blue-400 text-sm font-medium">
-          Get started
-          <svg
-            className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-// Activity indicator component
-function ActivityIndicator({ sessions }: { sessions: WhatsAppSession[] }) {
-  const recentActivity =
-    sessions.filter((s) => s.status === "ready").length > 0;
-
-  return (
-    <div className="flex items-center space-x-2">
-      <div
-        className={`w-2 h-2 rounded-full ${
-          recentActivity ? "bg-green-500 animate-pulse" : "bg-gray-500"
-        }`}
-      ></div>
-      <span className="text-xs text-gray-400">
-        {recentActivity ? "Active sessions detected" : "No active sessions"}
-      </span>
-    </div>
-  );
-}
+import { useCallback, useEffect, useState } from "react";
 
 export default function Dashboard() {
   const [sessions, setSessions] = useState<WhatsAppSession[]>([]);
@@ -162,13 +19,43 @@ export default function Dashboard() {
 
   const { toasts, removeToast, success, error: showError } = useToast();
 
+  const loadSessions = useCallback(
+    async (showSuccessToast = false) => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await whatsappApi.getAllSessions();
+
+        if (response.success && response.data) {
+          setSessions(response.data);
+          if (showSuccessToast) {
+            success("Sessions refreshed", "Data updated successfully");
+          }
+        } else {
+          const errorMsg = response.error || "Failed to load sessions";
+          setError(errorMsg);
+          showError("Failed to load sessions", errorMsg);
+        }
+      } catch (err) {
+        const errorMsg =
+          err instanceof Error ? err.message : "Failed to load sessions";
+        setError(errorMsg);
+        showError("Connection error", errorMsg);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [success, showError]
+  );
+
   useEffect(() => {
     loadSessions();
 
     // Auto-refresh every 30 seconds
     const interval = setInterval(loadSessions, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadSessions]);
 
   // Global keyboard shortcut for command palette
   useEffect(() => {
@@ -183,47 +70,16 @@ export default function Dashboard() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const loadSessions = async () => {
-    try {
-      if (!loading) setLoading(true); // Only show loading on manual refresh
-      setError("");
-
-      const response = await whatsappApi.getAllSessions();
-
-      if (response.success && response.data) {
-        setSessions(response.data);
-        if (!loading) {
-          success("Sessions refreshed", "Data updated successfully");
-        }
-      } else {
-        const errorMsg = response.error || "Failed to load sessions";
-        setError(errorMsg);
-        showError("Failed to load sessions", errorMsg);
-      }
-    } catch (err) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to load sessions";
-      setError(errorMsg);
-      showError("Connection error", errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getSessionStats = () => {
-    const total = sessions.length;
-    const ready = sessions.filter((s) => s.status === "ready").length;
-    const connecting = sessions.filter(
+  // Calculate stats from sessions data
+  const stats = {
+    total: sessions.length,
+    ready: sessions.filter((s) => s.status === "ready").length,
+    connecting: sessions.filter(
       (s) => s.status === "qr" || s.status === "initializing"
-    ).length;
-    const disconnected = sessions.filter(
-      (s) => s.status === "disconnected"
-    ).length;
-
-    return { total, ready, connecting, disconnected };
+    ).length,
+    disconnected: sessions.filter((s) => s.status === "disconnected").length,
   };
 
-  const stats = getSessionStats();
   const readySessions = sessions.filter((s) => s.status === "ready");
 
   return (
@@ -256,7 +112,7 @@ export default function Dashboard() {
               </button>
 
               <button
-                onClick={loadSessions}
+                onClick={() => loadSessions(true)}
                 disabled={loading}
                 className="px-4 py-2 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] text-white rounded-lg hover:from-[#1a5feb] hover:to-[#4fa6ff] disabled:opacity-50 transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/25"
               >
@@ -518,6 +374,137 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Anti-Ban Features */}
+        {sessions.length > 0 && sessions.some((s) => s.status === "ready") && (
+          <div className="mt-12">
+            <h2 className="text-xl font-semibold text-github-fg-default mb-6 flex items-center gap-2">
+              <span>🛡️</span>
+              Anti-Ban Protection
+            </h2>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+              {/* Stats for first ready session */}
+              <div className="xl:col-span-2">
+                <AntiBanStats
+                  sessionId={
+                    sessions.find((s) => s.status === "ready")?.id || ""
+                  }
+                  autoRefresh={true}
+                />
+              </div>
+
+              {/* Queue Status Card */}
+              <div className="space-y-6">
+                <div className="bg-github-canvas-subtle rounded-lg border border-github-border-default p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] rounded-lg flex items-center justify-center">
+                      <span className="text-white text-sm">📤</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-github-fg-default">
+                        Queue Status
+                      </h3>
+                      <p className="text-xs text-github-fg-muted">
+                        Global message processing
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-github-fg-default">
+                        Protection:
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-[#238636]"></div>
+                        <span className="text-sm font-medium text-github-fg-default">
+                          Active
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-github-fg-default">
+                        Ready Sessions:
+                      </span>
+                      <span className="text-sm font-bold text-[#238636]">
+                        {readySessions.length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-github-fg-default">
+                        Total Sessions:
+                      </span>
+                      <span className="text-sm font-bold text-[#1f6feb]">
+                        {sessions.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-github-border-muted">
+                    <Link
+                      href="/queue"
+                      className="w-full px-4 py-2 bg-[#1f6feb] text-white rounded-lg hover:bg-[#1a5feb] transition-colors text-center block text-sm"
+                    >
+                      Manage Queue
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Quick Access Cards */}
+                <div className="space-y-3">
+                  <Link href="/send" className="block">
+                    <div className="bg-github-canvas-subtle border border-github-border-default rounded-lg p-4 hover:bg-github-canvas-inset transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">💬</span>
+                        <div>
+                          <p className="text-sm font-medium text-github-fg-default">
+                            Send Protected Message
+                          </p>
+                          <p className="text-xs text-github-fg-muted">
+                            Use anti-ban features
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <div className="bg-github-canvas-subtle border border-github-border-default rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-xl">📊</span>
+                      <div>
+                        <p className="text-sm font-medium text-github-fg-default">
+                          Today&apos;s Usage
+                        </p>
+                        <p className="text-xs text-github-fg-muted">
+                          Across all sessions
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                      <div>
+                        <p className="text-lg font-bold text-github-fg-default">
+                          {sessions.filter((s) => s.status === "ready").length}
+                        </p>
+                        <p className="text-xs text-github-fg-muted">
+                          Ready Sessions
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-github-fg-default">
+                          {sessions.length}
+                        </p>
+                        <p className="text-xs text-github-fg-muted">
+                          Total Sessions
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Toast Notifications */}
@@ -527,7 +514,7 @@ export default function Dashboard() {
       <CommandPalette
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
-        sessions={sessions}
+        sessions={readySessions}
       />
     </div>
   );
