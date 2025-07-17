@@ -221,19 +221,22 @@ export default function MessagingInterface() {
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessageText(e.target.value);
 
-    // Send typing indicator
-    if (selectedContact && selectedSession && !isTyping) {
-      setIsTyping(true);
-
-      try {
-        actions.sendTypingIndicator(selectedSession, selectedContact);
-      } catch (error) {
-        console.error("Error sending typing indicator:", error);
-      }
-
+    // Send typing indicator with debouncing
+    if (selectedContact && selectedSession) {
       // Clear previous timeout if exists
       if (typingTimeout) {
         clearTimeout(typingTimeout);
+      }
+
+      // Only send typing indicator if not already typing
+      if (!isTyping) {
+        setIsTyping(true);
+
+        try {
+          actions.sendTypingIndicator(selectedSession, selectedContact);
+        } catch (error) {
+          console.error("Error sending typing indicator:", error);
+        }
       }
 
       // Set typing to false after 3 seconds
