@@ -1,5 +1,6 @@
 "use client";
 
+import { whatsappApi } from "@/lib/api";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
@@ -16,6 +17,7 @@ export default function QrCodeViewer({
 }: QrCodeViewerProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [expiryTime, setExpiryTime] = useState<number>(20);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (qrCode) {
@@ -46,6 +48,31 @@ export default function QrCodeViewer({
       return () => clearInterval(timer);
     }
   }, [qrCode]);
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+
+      // Try using the new refresh endpoint first
+      const refreshResponse = await whatsappApi.refreshQRCode(sessionId);
+
+      if (refreshResponse.success) {
+        // Wait a moment for the new QR to be generated, then call onRefresh
+        setTimeout(() => {
+          onRefresh?.();
+        }, 2000);
+      } else {
+        // Fallback to the original refresh method
+        onRefresh?.();
+      }
+    } catch (error) {
+      console.error("Error refreshing QR code:", error);
+      // Fallback to the original refresh method
+      onRefresh?.();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (!qrCode) {
     return (
@@ -168,12 +195,17 @@ export default function QrCodeViewer({
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={onRefresh}
-              className="px-6 py-3 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] text-white rounded-lg hover:from-[#1a5feb] hover:to-[#4fa6ff] transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/25"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="px-6 py-3 bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] text-white rounded-lg hover:from-[#1a5feb] hover:to-[#4fa6ff] transition-all duration-200 hover:shadow-lg hover:shadow-[#1f6feb]/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="flex items-center justify-center gap-2">
-                <span>🔄</span>
-                Refresh QR Code
+                {refreshing ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <span>🔄</span>
+                )}
+                {refreshing ? "Refreshing..." : "Refresh QR Code"}
               </span>
             </button>
 

@@ -161,6 +161,11 @@ export const whatsappApi = {
     return response.data;
   },
 
+  async refreshQRCode(sessionId: string): Promise<ApiResponse<void>> {
+    const response = await api.post(`/sessions/${sessionId}/refresh-qr`);
+    return response.data;
+  },
+
   async logout(sessionId: string): Promise<ApiResponse> {
     const response = await api.post(`/sessions/${sessionId}/logout`);
     return response.data;
